@@ -1,0 +1,20 @@
+;; shadow-cljs configuration
+{:deps true
+ :builds
+ {:app
+  {:target     :react-native
+   :init-fn    app.index/init
+   :output-dir "mobile-app/build"
+   :devtools   {:autoload true
+                :preloads [shadow.expo.keep-awake]}}
+
+  :app-test
+  {:target    :node-test
+   :output-to "mobile-app/test/node-tests.js"
+   :autorun   true}
+
+  :backend
+  {:target     :node-library
+   :exports    {:handler server.main/handler}
+   :output-dir "target"
+   :output-to  "target/main.js"}}}

@@ -1,0 +1,19 @@
+{
+  "name": "din-backend",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "watch": "shadow-cljs watch backend",
+    "compile": "shadow-cljs compile backend",
+    "build": "shadow-cljs release backend"
+  },
+  "keywords": [],
+  "author": "jgood",
+  "license": "MIT",
+  "devDependencies": {
+    "shadow-cljs": "^2.7.8",
+    "source-map-support": "^0.5.9",
+    "ws": "^6.1.2"
+  }
+}
