@@ -1,0 +1,10 @@
+{
+  "auth": {
+    "dinmobileapp29e4f4fc": {
+      "service": "Cognito",
+      "providerPlugin": "awscloudformation",
+      "dependsOn": [],
+      "customAuth": false
+    }
+  }
+}

@@ -8,8 +8,13 @@
    ["react-native" :as rn]
    ["react-native-paper" :as paper]
    ["tailwind-rn" :default tailwind-rn]
+   ["../aws-exports" :default aws-config]
+   ["aws-amplify" :default Amplify :refer [Auth]]
+   ["aws-amplify-react-native" :refer [withAuthenticator]]
 
    [applied-science.js-interop :as j]
+   [cljs.core.async :refer [go]]
+   [cljs.core.async.interop :refer [<p!]]
    [reagent.core :as r]
    [re-frame.core :refer [dispatch-sync]]
    [shadow.expo :as expo]
@@ -59,7 +64,9 @@
             [:> paper/Switch {:value           (= theme-selection :dark)
                               :on-value-change #(>evt [:set-theme (if (= theme-selection :dark)
                                                                     :light
-                                                                    :dark)])}]]]]]]])))
+                                                                    :dark)])}]]
+           [:> paper/Button {:on-press #(-> Auth (j/call :signOut))}
+            "Sign Out"]]]]]])))
 
 (def stack (rn-stack/createStackNavigator))
 
@@ -101,7 +108,11 @@
 (defn start
   {:dev/after-load true}
   []
-  (expo/render-root (r/as-element [root])))
+  (expo/render-root
+    (r/as-element
+      [(r/adapt-react-class
+         (withAuthenticator
+           (r/reactify-component root) (clj->js {:signUpConfig {:hiddenDefaults ["phone_number"]}})))])))
 
 (def version (-> expo-constants
                  (j/get :default)
@@ -109,6 +120,14 @@
                  (j/get :version)))
 
 (defn init []
+  (j/call Amplify :configure aws-config)
   (dispatch-sync [:initialize-db])
   (dispatch-sync [:set-version version])
   (start))
+
+;; Getting user info
+(comment (go (-> Auth
+                 (j/call :currentUserInfo)
+                 <p!
+                 js->clj
+                 tap>)))
