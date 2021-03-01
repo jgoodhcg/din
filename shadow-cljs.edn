@@ -15,6 +15,6 @@
 
   :backend
   {:target     :node-library
-   :exports    {:handler server.main/handler}
-   :output-dir "target"
-   :output-to  "target/main.js"}}}
+   :exports    {:handler backend.main/handler}
+   :output-dir "backend/build"
+   :output-to  "backend/build/main.js"}}}
