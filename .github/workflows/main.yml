@@ -58,6 +58,6 @@ jobs:
           zip_file: backend/build/deployment.zip
           memory_size: 128
           timeout: 10
-          handler: handler
+          handler: main.handler
           role: arn:aws:iam::963585794345:role/service-role/din-page-titles-role-sdscagg4
           runtime: nodejs14.x
