@@ -13,8 +13,9 @@
    ["aws-amplify-react-native" :refer [withAuthenticator]]
 
    [applied-science.js-interop :as j]
-   [cljs.core.async :refer [go]]
+   [cljs.core.async :refer [go <!]]
    [cljs.core.async.interop :refer [<p!]]
+   [cljs-http.client :as http]
    [reagent.core :as r]
    [re-frame.core :refer [dispatch-sync]]
    [shadow.expo :as expo]
@@ -23,6 +24,8 @@
    [app.handlers]
    [app.subscriptions]
    [app.helpers :refer [<sub >evt]]))
+
+(def api-endpoint "https://yabrbam9si.execute-api.us-east-2.amazonaws.com/default/din-page-titles")
 
 (defn tw [style-str]
   ;; https://github.com/vadimdemedes/tailwind-rn#supported-utilities
@@ -125,9 +128,33 @@
   (dispatch-sync [:set-version version])
   (start))
 
-;; Getting user info
+;; Get user info
 (comment (go (-> Auth
                  (j/call :currentUserInfo)
                  <p!
                  js->clj
+                 tap>)))
+
+;; Get jwt
+(comment (go (-> Auth
+                 (j/call :currentSession)
+                 <p!
+                 (j/call :getAccessToken)
+                 (j/get :jwtToken)
+                 tap>)))
+
+;; Call api
+(comment (def jwt (atom nil)))
+
+(comment (go (-> Auth
+                 (j/call :currentSession)
+                 <p!
+                 (j/call :getAccessToken)
+                 (j/get :jwtToken)
+                 (->> (reset! jwt)))))
+
+(comment (go (-> api-endpoint
+                 (http/get {:with-credentials? false
+                            :headers           {"Authorization" (str "Bearer " @jwt)}})
+                 <!
                  tap>)))
