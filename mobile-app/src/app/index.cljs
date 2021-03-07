@@ -144,17 +144,20 @@
                  tap>)))
 
 ;; Call api
-(comment (def jwt (atom nil)))
+(comment  (def jwt (atom nil))
+          )
 
 (comment (go (-> Auth
                  (j/call :currentSession)
                  <p!
                  (j/call :getAccessToken)
                  (j/get :jwtToken)
-                 (->> (reset! jwt)))))
+                 (->> (reset! jwt))))
+         )
 
 (comment (go (-> api-endpoint
                  (http/get {:with-credentials? false
                             :headers           {"Authorization" (str "Bearer " @jwt)}})
                  <!
-                 tap>)))
+                 tap>))
+         )

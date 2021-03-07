@@ -1,39 +1,45 @@
 (ns backend.main
-  (:require [cljs.nodejs.shell :refer [sh]]
-            [clojure.string :refer [split join]]
-            [clojure.edn :as edn]))
+  (:require
+   ["chrome-aws-lambda" :as chromium]
+   [applied-science.js-interop :as j]
+   [cljs.core.async :refer [go]]
+   [cljs.core.async.interop :refer [<p!]]))
 
-(defn handler [_ _ cb]
-  (cb nil
-      #js {:statusCode 200
-           :body       (js/JSON.stringify "Hello from Shadow")}))
+(defn handler [event context callback]
+  (go
+    (let [maybe-path (<p! (-> chromium (j/get :executablePath)))
+          puppeteer  (-> chromium (j/get :puppeteer))
+          browser    (<p! (-> puppeteer
+                              (j/call
+                                :launch
+                                (clj->js
+                                  (merge
+                                    {:args              (-> chromium (j/get :args))
+                                     :defaultViewPort   (-> chromium (j/get :defaultViewPort))
+                                     :headless          (if (some? maybe-path)
+                                                          (-> chromium (j/get :headless))
+                                                          true)
+                                     :ignoreHTTPSErrors true}
+                                    (when maybe-path {:executablePath maybe-path}))))))
+          page       (<p! (-> browser (j/call :newPage)))]
+      (try
+        (<p! (-> page (j/call :goto "https://jgood.io")))
+        (callback
+          nil
+          (clj->js
+            {:statusCode 200
+             :body
+             (js/JSON.stringify
+               (clj->js {:event   event
+                         :context context
+                         :result  (<p! (-> page (j/call :title))) }))}))
+        (catch js/Error err (js/console.log (ex-cause err))))
+      (.close browser))))
 
 (comment
 
-  (def result (atom nil))
+  ;; query [:find ?n :where [?e :node/title ?n]]
 
   (handler nil nil #(tap> %2))
 
-  (reset! result (:out (sh "npx" "roam-api"
-                           "-g" "xxx"
-                           "-e" "xxx"
-                           "-p" "xxx"
-                           "query" "'[:find ?n :where [?e :node/title ?n]]'")))
-
-  (-> @result
-      .toString
-      (split #"\n")
-      (->> (drop 2))
-      join
-      edn/read-string)
-
-  (-> [
-       "["
-       "[" "1" "]"
-       "[" "2" "]"
-       "]"
-       ]
-      join
-      edn/read-string
-      second)
   )
