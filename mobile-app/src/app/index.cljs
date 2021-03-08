@@ -128,36 +128,43 @@
   (dispatch-sync [:set-version version])
   (start))
 
-;; Get user info
-(comment (go (-> Auth
-                 (j/call :currentUserInfo)
-                 <p!
-                 js->clj
-                 tap>)))
+(comment
+  ;; Get user info
+  (go (-> Auth
+          (j/call :currentUserInfo)
+          <p!
+          js->clj
+          tap>))
 
-;; Get jwt
-(comment (go (-> Auth
-                 (j/call :currentSession)
-                 <p!
-                 (j/call :getAccessToken)
-                 (j/get :jwtToken)
-                 tap>)))
+  ;; Get jwt
+  (go (-> Auth
+          (j/call :currentSession)
+          <p!
+          (j/call :getAccessToken)
+          (j/get :jwtToken)
+          tap>))
 
-;; Call api
-(comment  (def jwt (atom nil))
-          )
 
-(comment (go (-> Auth
-                 (j/call :currentSession)
-                 <p!
-                 (j/call :getAccessToken)
-                 (j/get :jwtToken)
-                 (->> (reset! jwt))))
-         )
+  ;; Call api
+  (def jwt (atom nil))
 
-(comment (go (-> api-endpoint
-                 (http/get {:with-credentials? false
-                            :headers           {"Authorization" (str "Bearer " @jwt)}})
-                 <!
-                 tap>))
-         )
+  (go (-> Auth
+          (j/call :currentSession)
+          <p!
+          (j/call :getAccessToken)
+          (j/get :jwtToken)
+          (->> (reset! jwt))))
+
+  (go (-> api-endpoint
+          (http/post {:with-credentials? false
+                      :headers           {"Authorization" (str "Bearer " @jwt)}
+                      :json-params       {:email    "xxx"
+                                          :graph    "xxx"
+                                          :password "xxx"}})
+          <!
+          ;; :body
+          ;; (#(-> js/JSON (j/call :parse %)))
+          ;; (js->clj :keywordize-keys true)
+          ;; :result
+          tap>))
+  )
