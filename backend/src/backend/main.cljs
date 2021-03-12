@@ -33,17 +33,17 @@
         (-> page (j/call :setDefaultTimeout 240000))
         (log "set timeout")
         (<p! (-> page (j/call :goto (str "https://roamresearch.com/#/app/" graph))))
-        (log "got to roam")
+        (log (str "got to roam with graph name: " graph))
         (<p! (-> page (j/call :waitForNavigation)))
         (log "waited for nav")
         (<p! (-> page (j/call :waitForSelector "input[name=email]")))
-        (log "waited for input email")
+        (log "waited for email input")
         (<p! (-> page (j/call :type "input[name=email]" email)))
-        (log "typed email")
+        (log (str "typed email"))
         (<p! (-> page (j/call :type "input[name=password]" password)))
         (log "typed password")
         (<p! (-> page (j/call :click ".bp3-button")))
-        (log "pressed button")
+        (log "pressed login button")
         (<p! (-> page (j/call :waitForSelector ".bp3-icon-more")))
         (log "waited for graph load")
         (let [titles (<p! (-> page (j/call :evaluate
@@ -51,7 +51,9 @@
                                              (js/Promise.resolve
                                                (.q (.-roamAlphaAPI js/window) q)))
                                            "[:find ?n :where [?e :node/title ?n]]")))]
-          (log "got titles")
+
+          (log (str "got " (count (js->clj titles)) " titles"))
+
           (callback
             nil
             (clj->js
@@ -59,10 +61,12 @@
                :body
                (js/JSON.stringify
                  (clj->js {:titles titles}))})))
+
         (catch js/Error err
           (log "caught error")
-          (js/console.log (ex-cause err))
+          (log (ex-cause err))
           (callback nil (clj->js {:statusCode 500 :body err}))))
+
       (.close browser))))
 
 (comment
