@@ -11,7 +11,7 @@
   "Throw an exception if db doesn't have a valid spec."
   [spec db event]
   (when-not (s/valid? spec db)
-    (tap> event)
+    (tap> {:spec-failure-event event})
     (let [explanation (s/explain-str spec db)]
       (throw (str "Spec check failed: " explanation))
       true)))
@@ -37,26 +37,45 @@
 (def base-interceptors  [;; (when ^boolean goog.DEBUG debug) ;; use this for some verbose re-frame logging
                          spec-validation])
 
+(def id-gen
+  (->interceptor :id :id-gen
+                 :before #(assoc-in % [:coeffects :new-uuid] (random-uuid))))
+
 (defn initialize-db [_ _]
   default-app-db)
+(reg-event-db :initialize-db [base-interceptors] initialize-db)
 
 (defn set-theme [db [_ theme]]
   (->> db
        (setval [:settings :theme] theme)))
+(reg-event-db :set-theme [base-interceptors] set-theme)
 
 (defn set-version [db [_ version]]
   (->> db
        (setval [:version] version)))
+(reg-event-db :set-version [base-interceptors] set-version)
 
 (defn some-fx-example [cofx [_ x]]
   {:db              (:db cofx)
    :some-fx-example x})
+(reg-event-fx :some-fx-example [base-interceptors] some-fx-example)
 
 (defn modal-toggle-feed-add [db [_ _]]
   (->> db (transform [:modals :modal/feed-add :feed-add/visible] not)))
-
-(reg-event-db :initialize-db [base-interceptors] initialize-db)
-(reg-event-db :set-theme [base-interceptors] set-theme)
-(reg-event-db :set-version [base-interceptors] set-version)
-(reg-event-fx :some-fx-example [base-interceptors] some-fx-example)
 (reg-event-db :modal-toggle-feed-add [base-interceptors] modal-toggle-feed-add)
+
+(defn add-feed [{:keys [new-uuid db]} [_ feed-url]]
+  {:db           (->> db
+                      (transform [:feeds] #(assoc % new-uuid
+                                                  {:feed/id  new-uuid
+                                                   :feed/url feed-url})))
+   :refresh-feed {:feed/id  new-uuid
+                  :feed/url feed-url}})
+(reg-event-fx :add-feed [base-interceptors id-gen] add-feed)
+
+(defn update-feed [db [_ {:feed/keys [id] :as feed}]]
+  (tap> {:location "update-feed handler"
+         :feed     feed
+         :db       db})
+  (->> db (transform [:feeds (sp/keypath id)] #(merge % feed))))
+(reg-event-db :update-feed [base-interceptors] update-feed)

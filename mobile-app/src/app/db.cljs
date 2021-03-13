@@ -5,9 +5,8 @@
 
 (def feed-data-spec
   (ds/spec {:name ::feed-ds
-            :spec {:feed/id           uuid?
-                   :feed/url          string?
-                   :feed/parsed-model map}}))
+            :spec {:feed/id  uuid?
+                   :feed/url string?}}))
 
 (s/def ::feed feed-data-spec)
 
