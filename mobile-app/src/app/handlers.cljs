@@ -3,7 +3,7 @@
    [re-frame.core :refer [reg-event-db
                           ->interceptor
                           reg-event-fx]]
-   [com.rpl.specter :as sp :refer [setval]]
+   [com.rpl.specter :as sp :refer [setval transform]]
    [clojure.spec.alpha :as s]
    [app.db :as db :refer [default-app-db app-db-spec]]))
 
@@ -52,7 +52,11 @@
   {:db              (:db cofx)
    :some-fx-example x})
 
+(defn modal-toggle-feed-add [db [_ _]]
+  (->> db (transform [:modals :modal/feed-add :feed-add/visible] not)))
+
 (reg-event-db :initialize-db [base-interceptors] initialize-db)
 (reg-event-db :set-theme [base-interceptors] set-theme)
 (reg-event-db :set-version [base-interceptors] set-version)
 (reg-event-fx :some-fx-example [base-interceptors] some-fx-example)
+(reg-event-db :modal-toggle-feed-add [base-interceptors] modal-toggle-feed-add)

@@ -23,53 +23,10 @@
    [app.fx]
    [app.handlers]
    [app.subscriptions]
-   [app.helpers :refer [<sub >evt]]))
+   [app.helpers :refer [<sub >evt]]
+   [app.screen.feeds :refer [root] :rename {root feeds-screen}]))
 
 (def api-endpoint "https://yabrbam9si.execute-api.us-east-2.amazonaws.com/default/din-page-titles")
-
-(defn tw [style-str]
-  ;; https://github.com/vadimdemedes/tailwind-rn#supported-utilities
-  (-> style-str
-      tailwind-rn
-      (js->clj :keywordize-keys true)))
-
-;; must use defonce and must refresh full app so metro can fill these in
-;; at live-reload time `require` does not exist and will cause errors
-;; must use path relative to :output-dir
-(defonce splash-img (js/require "../assets/shadow-cljs.png"))
-
-(defn screen-main [props]
-  (r/as-element
-    (let [version         (<sub [:version])
-          theme-selection (<sub [:theme])
-          theme           (-> props (j/get :theme))
-          expo-version    (-> expo-constants
-                              (j/get :default)
-                              (j/get :manifest)
-                              (j/get :sdkVersion))]
-
-      [:> rn/SafeAreaView {:style (tw "flex flex-1")}
-       [:> rn/StatusBar {:visibility "hidden"}]
-       [:> paper/Surface {:style (tw "flex flex-1 justify-center")}
-        [:> rn/View
-         [:> paper/Card
-          [:> paper/Card.Cover {:source splash-img}]
-          [:> paper/Card.Title {:title    "My new expo cljs app!"
-                                :subtitle (str "Version: " version)}]
-          [:> paper/Card.Content
-           [:> paper/Paragraph (str "Using Expo SDK: " expo-version)]
-           [:> rn/View {:style (tw "flex flex-row justify-between")}
-            [:> paper/Text
-             {:style {:color (-> theme
-                                 (j/get :colors)
-                                 (j/get :accent))}}
-             "Dark mode"]
-            [:> paper/Switch {:value           (= theme-selection :dark)
-                              :on-value-change #(>evt [:set-theme (if (= theme-selection :dark)
-                                                                    :light
-                                                                    :dark)])}]]
-           [:> paper/Button {:on-press #(-> Auth (j/call :signOut))}
-            "Sign Out"]]]]]])))
 
 (def stack (rn-stack/createStackNavigator))
 
@@ -105,8 +62,8 @@
                             (swap! !route-name-ref merge {:current current-route-name})))}
 
       [:> (navigator) {:header-mode "none"}
-       (screen {:name      "Screen1"
-                :component (paper/withTheme screen-main)})]]]))
+       (screen {:name      "Feeds"
+                :component (paper/withTheme feeds-screen)})]]]))
 
 (defn start
   {:dev/after-load true}
@@ -158,9 +115,9 @@
   (go (-> api-endpoint
           (http/post {:with-credentials? false
                       :headers           {"Authorization" (str "Bearer " @jwt)}
-                      :json-params       {:email    "xxx"
-                                          :graph    "xxx"
-                                          :password "xxx"}})
+                      :json-params       {:email    "jgoodhcg@gmail.com"
+                                          :graph    "jgood-brain"
+                                          :password "2rsUH4$GBZ6g2FDBcd3dx"}})
           <!
           ;; :body
           ;; (#(-> js/JSON (j/call :parse %)))

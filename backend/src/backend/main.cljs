@@ -70,9 +70,9 @@
       (.close browser))))
 
 (comment
-  (handler {:body (->  {:email    "xxx"
-                        :graph    "xxx"
-                        :password "xxx"}
+  (handler {:body (->  {:email    "jgoodhcg@gmail.com"
+                        :graph    "jgood-brain"
+                        :password "2rsUH4$GBZ6g2FDBcd3dx"}
                        clj->js
                        js/JSON.stringify)}
            nil
