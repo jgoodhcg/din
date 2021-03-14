@@ -18,7 +18,8 @@
   (ds/spec {:spec {:settings {:theme (s/spec #{:light :dark})}
                    :version  string?
                    :feeds    ::feeds
-                   :modals   {:modal/feed-add {:feed-add/visible boolean?}}}
+                   :modals   {:modal/feed-add    {:feed-add/visible boolean?}
+                              :modal/feed-remove {:feed-remove/id (ds/maybe uuid?)}}}
             :name ::app-db}))
 
 (def default-app-db
@@ -27,4 +28,5 @@
    :feeds    {#uuid "e391e5f9-2d87-43e9-b64e-2ae2df13b475"
               {:feed/url "https://feeds.transistor.fm/the-indie-hackers-podcast"
                :feed/id  #uuid "e391e5f9-2d87-43e9-b64e-2ae2df13b475" }}
-   :modals   {:modal/feed-add {:feed-add/visible false}}})
+   :modals   {:modal/feed-add    {:feed-add/visible false}
+              :modal/feed-remove {:feed-remove/id nil}}})

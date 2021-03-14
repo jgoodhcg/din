@@ -86,3 +86,16 @@
   {:db            db
    :refresh-feeds (->> db (select [:feeds sp/MAP-VALS]))})
 (reg-event-fx :refresh-feeds [base-interceptors] refresh-feeds)
+
+(defn modal-open-feed-remove [db [_ feed-id]]
+  (->> db (setval [:modals :modal/feed-remove :feed-remove/id] feed-id)))
+(reg-event-db :modal-open-feed-remove [base-interceptors] modal-open-feed-remove)
+
+(defn modal-close-feed-remove [db [_ _]]
+  (->> db (setval [:modals :modal/feed-remove :feed-remove/id] nil)))
+(reg-event-db :modal-close-feed-remove [base-interceptors] modal-close-feed-remove)
+
+(defn remove-feed [db [_ feed-id]]
+  (->> db
+       (transform [:feeds] #(dissoc % feed-id))))
+(reg-event-db :remove-feed [base-interceptors] remove-feed)

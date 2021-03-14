@@ -5,20 +5,38 @@
 (defn version [db _]
   (->> db
        (select-one! [:version])))
+(reg-sub :version version)
 
 (defn theme [db _]
   (->> db
        (select-one! [:settings :theme])))
+(reg-sub :theme theme)
 
-(defn feeds [db _]
-  (->> db
-       (select [:feeds sp/MAP-VALS])))
+(defn feeds-indexed [db _]
+  (->> db (select-one! [:feeds])))
+(reg-sub :feeds-indexed feeds-indexed)
+
+(defn feeds [indexed-feeds _]
+  (->> indexed-feeds
+       (select [sp/MAP-VALS])))
+(reg-sub :feeds
+         :<- [:feeds-indexed]
+         feeds)
 
 (defn modal-feed-add-visible [db _]
   (->> db
        (select-one! [:modals :modal/feed-add :feed-add/visible])))
-
-(reg-sub :version version)
-(reg-sub :theme theme)
-(reg-sub :feeds feeds)
 (reg-sub :modal-feed-add-visible modal-feed-add-visible)
+
+(defn modal-feed-remove-id [db _]
+  (->> db
+       (select-one! [:modals :modal/feed-remove :feed-remove/id])))
+(reg-sub :modal-feed-remove-id modal-feed-remove-id)
+
+(defn modal-feed-remove-title [[maybe-feed-id feeds-indexed] _]
+  (when-some [feed-id maybe-feed-id]
+    (->> feeds-indexed (select-one! [(sp/keypath feed-id) :feed/title]))))
+(reg-sub :modal-feed-remove-title
+         :<- [:modal-feed-remove-id]
+         :<- [:feeds-indexed]
+         modal-feed-remove-title)
