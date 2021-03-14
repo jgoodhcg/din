@@ -32,7 +32,21 @@
   (>evt [:update-feed {:feed/id        id
                        :feed/title     (-> feed (j/get :title))
                        :feed/image-url (or (-> feed (j/get-in [:itunes :image]))
-                                           (-> feed (j/get-in [:image :url])))}]))
+                                           (-> feed (j/get-in [:image :url])))
+                       :feed/items     (-> feed
+                                           (j/get :items)
+                                           (->> (mapv (fn [item]
+                                                        ;; TODO justin 2021-03-14 use more of the itunes properties
+                                                        (j/let [^:js {:keys [id
+                                                                             title
+                                                                             imageUrl
+                                                                             description
+                                                                             itunes]} item
+                                                                ^:js {:keys [image]} itunes]
+                                                          {:feed-item/id          id
+                                                           :feed-item/title       title
+                                                           :feed-item/image-url   (or image imageUrl)
+                                                           :feed-item/description description})))))}]))
 
 (defn <refresh-feed [{:feed/keys [id url]}]
   (tap> {:location "refresh single feed"
@@ -41,7 +55,6 @@
   (go
     (let [feed (<! (<get-feed url))]
       (dispatch-update-feed id feed))))
-
 (reg-fx :refresh-feed <refresh-feed)
 
 (reg-fx :refresh-feeds

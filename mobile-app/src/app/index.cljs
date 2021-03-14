@@ -83,6 +83,7 @@
   (j/call Amplify :configure aws-config)
   (dispatch-sync [:initialize-db])
   (dispatch-sync [:set-version version])
+  (dispatch-sync [:refresh-feeds])
   (start))
 
 (comment
@@ -115,9 +116,9 @@
   (go (-> api-endpoint
           (http/post {:with-credentials? false
                       :headers           {"Authorization" (str "Bearer " @jwt)}
-                      :json-params       {:email    "jgoodhcg@gmail.com"
-                                          :graph    "jgood-brain"
-                                          :password "2rsUH4$GBZ6g2FDBcd3dx"}})
+                      :json-params       {:email    "xxx"
+                                          :graph    "xxx"
+                                          :password "xxx"}})
           <!
           ;; :body
           ;; (#(-> js/JSON (j/call :parse %)))
