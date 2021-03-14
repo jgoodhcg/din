@@ -3,7 +3,7 @@
    [re-frame.core :refer [reg-event-db
                           ->interceptor
                           reg-event-fx]]
-   [com.rpl.specter :as sp :refer [setval transform]]
+   [com.rpl.specter :as sp :refer [setval transform select]]
    [clojure.spec.alpha :as s]
    [app.db :as db :refer [default-app-db app-db-spec]]))
 
@@ -79,3 +79,10 @@
          :db       db})
   (->> db (transform [:feeds (sp/keypath id)] #(merge % feed))))
 (reg-event-db :update-feed [base-interceptors] update-feed)
+
+(defn refresh-feeds [{:keys [db]} [_ _]]
+  (tap> {:location "refresh-feeds handler"
+         :feeds    (->> db (select [:feeds sp/MAP-VALS]))})
+  {:db            db
+   :refresh-feeds (->> db (select [:feeds sp/MAP-VALS]))})
+(reg-event-fx :refresh-feeds [base-interceptors] refresh-feeds)

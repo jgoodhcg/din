@@ -33,14 +33,22 @@
              theme            (-> props (j/get :theme))
              feeds            (<sub [:feeds])
              feed-add-visible (<sub [:modal-feed-add-visible])
+             width            (-> rn/Dimensions (j/call :get "window") (j/get :width))
              ]
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}
           [:> rn/StatusBar {:visibility "hidden"}]
           [:> paper/Surface {:style (tw "flex flex-1 justify-start")}
+
            [:> rn/View {:style (tw "flex flex-1 justify-start")}
-            (for [{:feed/keys [url id]} feeds]
-              [:> paper/Text {:key id} url])
+            (for [{:feed/keys [url id image-url]} feeds]
+              [:> paper/Card {:key id}
+               [:> paper/Card.Cover {:source      {:uri image-url}
+                                     :resize-mode "contain"
+                                     :style       (merge (tw "")
+                                                         {:width  (-> width (/ 3))
+                                                          :height (-> width (/ 3))})}]])
+
             [:> paper/FAB {:style    (tw "absolute right-0 bottom-0 mr-8 mb-20")
                            :icon     (if feed-add-visible "close" "plus")
                            :on-press #(>evt [:modal-toggle-feed-add])}]
