@@ -3,7 +3,6 @@
    ["@react-navigation/native" :as nav]
    ["@react-navigation/stack" :as rn-stack]
    ["expo" :as ex]
-   ["expo-constants" :as expo-constants]
    ["react" :as react]
    ["react-native" :as rn]
    ["react-native-paper" :as paper]
@@ -69,21 +68,17 @@
   {:dev/after-load true}
   []
   (expo/render-root
-    (r/as-element
+    (r/as-element ;; [root]
       [(r/adapt-react-class
          (withAuthenticator
-           (r/reactify-component root) (clj->js {:signUpConfig {:hiddenDefaults ["phone_number"]}})))])))
-
-(def version (-> expo-constants
-                 (j/get :default)
-                 (j/get :manifest)
-                 (j/get :version)))
+           (r/reactify-component root) (clj->js {:signUpConfig {:hiddenDefaults ["phone_number"]}})))]
+      )))
 
 (defn init []
+  (println "hellooooooooooo ----------------------------------------------------")
   (j/call Amplify :configure aws-config)
   (dispatch-sync [:initialize-db])
-  (dispatch-sync [:set-version version])
-  (dispatch-sync [:refresh-feeds])
+  (dispatch-sync [:trigger-load-db])
   (start))
 
 (comment

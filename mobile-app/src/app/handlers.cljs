@@ -34,16 +34,24 @@
       :after validate-spec)
     ->interceptor))
 
-(def base-interceptors  [;; (when ^boolean goog.DEBUG debug) ;; use this for some verbose re-frame logging
+(def persist
+  (->interceptor
+    :id :persist
+    :after (fn [context]
+             (->> context (setval [:effects :persist] (-> context :effects :db str))))))
+
+(def base-interceptors  [persist
+                         ;; (when ^boolean goog.DEBUG debug) ;; use this for some verbose re-frame logging
                          spec-validation])
 
 (def id-gen
   (->interceptor :id :id-gen
                  :before #(assoc-in % [:coeffects :new-uuid] (random-uuid))))
 
-(defn initialize-db [_ _]
-  default-app-db)
-(reg-event-db :initialize-db [base-interceptors] initialize-db)
+(defn initialize-db [_ [_ version]]
+  (println "init-db ----------------------------------------------------")
+  {:db default-app-db})
+(reg-event-fx :initialize-db [spec-validation] initialize-db)
 
 (defn set-theme [db [_ theme]]
   (->> db
@@ -74,15 +82,10 @@
 (reg-event-fx :add-feed [base-interceptors id-gen] add-feed)
 
 (defn update-feed [db [_ {:feed/keys [id] :as feed}]]
-  (tap> {:location "update-feed handler"
-         :feed     feed
-         :db       db})
   (->> db (transform [:feeds (sp/keypath id)] #(merge % feed))))
 (reg-event-db :update-feed [base-interceptors] update-feed)
 
 (defn refresh-feeds [{:keys [db]} [_ _]]
-  (tap> {:location "refresh-feeds handler"
-         :feeds    (->> db (select [:feeds sp/MAP-VALS]))})
   {:db            db
    :refresh-feeds (->> db (select [:feeds sp/MAP-VALS]))})
 (reg-event-fx :refresh-feeds [base-interceptors] refresh-feeds)
@@ -99,3 +102,15 @@
   (->> db
        (transform [:feeds] #(dissoc % feed-id))))
 (reg-event-db :remove-feed [base-interceptors] remove-feed)
+
+(defn trigger-load-db [cofx _]
+  (println "trigger load app db handler ----------------------------")
+  (merge cofx {:load true}))
+(reg-event-fx :trigger-load-db trigger-load-db)
+
+(defn load-app-db [_ [_ {:keys [app-db version]}]]
+  (println "load app db handler ----------------------------")
+  {:db         app-db
+   :dispatch-n [[:set-version version]
+                [:refresh-feeds]]})
+(reg-event-fx :load-app-db [spec-validation] load-app-db)

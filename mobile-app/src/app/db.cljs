@@ -3,6 +3,15 @@
    [clojure.spec.alpha :as s]
    [spec-tools.data-spec :as ds]))
 
+(def feed-item-data-spec
+  (ds/spec {:name ::feed-item-ds
+            :spec {:feed-item/id          uuid?
+                   :feed-item/title       string?
+                   :feed-item/image-url   (ds/maybe string?)
+                   :feed-item/description string?}}))
+
+(s/def ::feed-item feed-item-data-spec)
+
 (def feed-data-spec
   (ds/spec {:name ::feed-ds
             :spec {:feed/id                 uuid?

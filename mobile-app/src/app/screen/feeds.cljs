@@ -3,6 +3,12 @@
    ["react-native" :as rn]
    ["react-native-paper" :as paper]
    ["react-native-gesture-handler" :as g]
+   ["../../aws-exports" :default aws-config]
+
+   ["expo-file-system" :as fs]
+   [cljs.core.async :refer [go <!]]
+   [cljs.core.async.interop :refer [<p!]]
+   [clojure.edn :as edn]
 
    [applied-science.js-interop :as j]
    [reagent.core :as r]
@@ -11,6 +17,12 @@
    [app.helpers :refer [<sub >evt tw]]))
 
 (def feed-input (atom nil))
+
+(def dd (-> fs (j/get :documentDirectory)))
+(def app-db-file (str dd "app-db.edn"))
+(def files (r/atom []))
+(def app-db (r/atom {}))
+(def app-db-info (r/atom {}))
 
 (defn modal-add [{:keys [feed-add-visible]}]
   [:> paper/Portal
@@ -76,6 +88,7 @@
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}
           [:> rn/StatusBar {:visibility "hidden"}]
+          ;; TODO justin 2021-03-20 Add scroll view
           [:> paper/Surface {:style (tw "flex flex-1 justify-start")}
 
            [:> rn/View {:style (tw "flex flex-1 justify-start flex-row flex-wrap")}
@@ -83,6 +96,7 @@
               [feed-card (merge {:key id}
                                 (p/map-of id image-url title width))])
 
+            ;; TODO justin 2021-03-20 replace fab with outline of a podcast at the end of the feeds block with a Plus and "add feed"
             [:> paper/FAB {:style    (tw "absolute right-0 bottom-0 mr-8 mb-20")
                            :icon     (if feed-add-visible "close" "plus")
                            :on-press #(>evt [:modal-toggle-feed-add])}]
@@ -90,4 +104,30 @@
             [modal-add    (p/map-of feed-add-visible)]
             [modal-remove (p/map-of feed-remove-id feed-remove-title)]
 
+            [:> rn/View {:style (tw "w-full h-40 p-4")}
+             ;;             [:> paper/Text (-> aws-config js->clj str)]
+             [:> paper/Text {:style (tw "mt-4")} dd]
+             [:> paper/Text {:style (tw "my-4")} app-db-file]
+             [:> paper/Button {:mode     "contained"
+                               :on-press #(go
+                                            (-> fs (j/call :readDirectoryAsync dd)
+                                                <p!
+                                                ((fn [result] (reset! files (-> result js->clj))))))}
+              "get directory"]
+             [:> paper/Text {:style (tw "mt-4")} (str @files)]
+             [:> paper/Button {:mode     "contained"
+                               :on-press #(go
+                                            (-> fs (j/call :getInfoAsync app-db-file)
+                                                <p!
+                                                ((fn [result] (reset! app-db-info (-> result js->clj))))))}
+              "get app-db file info"]
+             [:> paper/Text {:style (tw "my-4")} (str @app-db-info)]
+             [:> paper/Button {:mode     "contained"
+                               :on-press #(go
+                                            (-> fs (j/call :readAsStringAsync app-db-file)
+                                                <p!
+                                                ((fn [result] (reset! app-db (-> result edn/read-string))))))}
+              "read app-db file"]
+             [:> paper/Text {:style (tw "my-4")} (str @app-db)]
+             ]
             ]]]))]))
