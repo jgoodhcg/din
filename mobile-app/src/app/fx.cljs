@@ -12,7 +12,7 @@
    [cljs-http.client :as http]
    [clojure.edn :as edn]
 
-   [app.helpers :refer [>evt]]))
+   [app.helpers :refer [>evt screen-key-name-mapping]]))
 
 (defn <get-feed [url]
   (go (-> url
@@ -100,3 +100,19 @@
                              (-> rn/Alert (j/call :alert "Failure on readAsStringAsync" (str e))))))))))
               (catch js/Object e
                 (-> rn/Alert (j/call :alert "Failure on getInfoAsync" (str e))))))))
+
+(def !navigation-ref (clojure.core/atom nil))
+
+(defn navigate [screen-key] ;; no params yet
+  ;; TODO implement a check that the navigation component has initialized
+  ;; https://reactnavigation.org/docs/navigating-without-navigation-prop#handling-initialization
+  ;; The race condition is in my favor if the user has to press a component within the navigation container
+  (tap> {:location       "navigate fx"
+         :navigation-ref @!navigation-ref
+         :screen-key     screen-key
+         :screen-name    (get screen-key-name-mapping screen-key)})
+
+  (-> @!navigation-ref
+      ;; no params yet for second arg
+      (j/call :navigate (get screen-key-name-mapping screen-key) (j/lit {}))))
+(reg-fx :navigate navigate)

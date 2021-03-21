@@ -110,7 +110,15 @@
 
 (defn load-app-db [_ [_ {:keys [app-db version]}]]
   (println "load app db handler ----------------------------")
-  {:db         app-db
+  {:db         (merge default-app-db app-db) ;; merge default to handle accretion changes without blowing up spec check
    :dispatch-n [[:set-version version]
                 [:refresh-feeds]]})
 (reg-event-fx :load-app-db [spec-validation] load-app-db)
+
+(defn select-feed [cofx [_ {:keys [feed-id navigate]}]]
+  (tap> {:location "select handler"
+         :feed-id  feed-id
+         :navigate navigate})
+  (merge (->> cofx (setval [:db :selected-feed] feed-id))
+         (when navigate {:navigate :screen/feed})))
+(reg-event-fx :select-feed [base-interceptors] select-feed)

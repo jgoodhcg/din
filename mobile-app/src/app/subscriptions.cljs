@@ -40,3 +40,14 @@
          :<- [:modal-feed-remove-id]
          :<- [:feeds-indexed]
          modal-feed-remove-title)
+
+(defn selected-feed-id [db _]
+  (->> db (select-one! [:selected-feed])))
+(reg-sub :selected-feed-id selected-feed-id)
+
+(defn selected-feed [[feeds-indexed selected-feed-id] _]
+  (->> feeds-indexed (select-one! [(sp/keypath selected-feed-id)])))
+(reg-sub :selected-feed
+         :<- [:feeds-indexed]
+         :<- [:selected-feed-id]
+         selected-feed)

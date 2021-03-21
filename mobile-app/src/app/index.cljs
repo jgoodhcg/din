@@ -19,11 +19,12 @@
    [re-frame.core :refer [dispatch-sync]]
    [shadow.expo :as expo]
 
-   [app.fx]
+   [app.fx :refer [!navigation-ref]]
    [app.handlers]
    [app.subscriptions]
-   [app.helpers :refer [<sub >evt]]
-   [app.screen.feeds :refer [root] :rename {root feeds-screen}]))
+   [app.helpers :refer [<sub >evt screen-key-name-mapping]]
+   [app.screen.feeds :refer [root] :rename {root feeds-screen}]
+   [app.screen.feed :refer [root] :rename {root feed-screen}]))
 
 (def api-endpoint "https://yabrbam9si.execute-api.us-east-2.amazonaws.com/default/din-page-titles")
 
@@ -35,8 +36,7 @@
 
 (defn root []
   (let [theme           (<sub [:theme])
-        !route-name-ref (clojure.core/atom {})
-        !navigation-ref (clojure.core/atom {})]
+        !route-name-ref (clojure.core/atom {})]
 
     [:> paper/Provider
      {:theme (case theme
@@ -61,8 +61,10 @@
                             (swap! !route-name-ref merge {:current current-route-name})))}
 
       [:> (navigator) {:header-mode "none"}
-       (screen {:name      "Feeds"
-                :component (paper/withTheme feeds-screen)})]]]))
+       (screen {:name      (:screen/feeds screen-key-name-mapping)
+                :component (paper/withTheme feeds-screen)})
+       (screen {:name      (:screen/feed screen-key-name-mapping)
+                :component (paper/withTheme feed-screen)})]]]))
 
 (defn start
   {:dev/after-load true}

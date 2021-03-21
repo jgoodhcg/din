@@ -12,3 +12,6 @@
   (-> style-str
       tailwind-rn
       (js->clj :keywordize-keys true)))
+
+(def screen-key-name-mapping #:screen {:feed  "Feed"
+                                       :feeds "Feeds"} )

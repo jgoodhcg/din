@@ -24,11 +24,12 @@
 (s/def ::feeds (s/and map? (s/every-kv uuid? ::feed)))
 
 (def app-db-spec
-  (ds/spec {:spec {:settings {:theme (s/spec #{:light :dark})}
-                   :version  string?
-                   :feeds    ::feeds
-                   :modals   {:modal/feed-add    {:feed-add/visible boolean?}
-                              :modal/feed-remove {:feed-remove/id (ds/maybe uuid?)}}}
+  (ds/spec {:spec {:settings      {:theme (s/spec #{:light :dark})}
+                   :version       string?
+                   :feeds         ::feeds
+                   :modals        {:modal/feed-add    {:feed-add/visible boolean?}
+                                   :modal/feed-remove {:feed-remove/id (ds/maybe uuid?)}}
+                   :selected-feed (ds/maybe uuid?)}
             :name ::app-db}))
 
 (def default-app-db
@@ -65,5 +66,6 @@
               {:feed/url "https://feeds.transistor.fm/software-social"
                :feed/id  #uuid "cca6a4b3-23aa-4055-a72f-0286108492ea"}
               }
-   :modals {:modal/feed-add    {:feed-add/visible false}
-            :modal/feed-remove {:feed-remove/id nil}}})
+   :modals        {:modal/feed-add    {:feed-add/visible false}
+                   :modal/feed-remove {:feed-remove/id nil}}
+   :selected-feed nil})
