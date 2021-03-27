@@ -19,20 +19,28 @@
 (defn root [props]
   (r/as-element
     [(fn []
-       (let [;; theme-selection   (<sub [:theme])
-             ;; theme             (-> props (j/get :theme))
-             ;; feeds             (<sub [:feeds])
-             ;; feed-add-visible  (<sub [:modal-feed-add-visible])
-             ;; feed-remove-id    (<sub [:modal-feed-remove-id])
-             ;; feed-remove-title (<sub [:modal-feed-remove-title])
-             ;; width             (-> rn/Dimensions (j/call :get "window") (j/get :width))
-             selected-feed (<sub [:selected-feed])
-             ]
+       (let [{:feed/keys [title image-url items]} (<sub [:selected-feed])]
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}
           [:> rn/StatusBar {:visibility "hidden"}]
           [:> paper/Surface {:style (tw "flex flex-1 justify-start")}
-           [:> rn/ScrollView {:content-container-style (tw "flex justify-start flex-row flex-wrap")}
 
-            [:> paper/Text (:feed/title selected-feed)]
-            ]]]))]))
+           [:> paper/Card {:style (tw "w-full")}
+            [:> paper/Card.Cover {:source {:uri image-url}}]
+            [:> paper/Card.Title {:title title}]]
+
+           [:> rn/FlatList
+            {:data          (j/lit items)
+             :key-extractor (fn [item] (-> item (j/get :id)))
+             :render-item   (fn [obj]
+                              (j/let [^:js {:keys [id title image-url]} (j/get obj :item)]
+                                (r/as-element
+                                  [:> rn/View {:key   id
+                                               :style (tw "mt-2 pl-2 w-9/12 flex flex-row")}
+                                   [:> paper/Card.Cover {:source {:uri image-url}
+                                                         :style  (tw "w-20 h-20 mr-2")}]
+                                   [:> rn/View {:style (tw "flex flex-col")}
+                                    [:> paper/Text {:style (tw "pr-2")} title]
+                                    [:> paper/Text {:style (tw "text-gray-500")} "timeline here"]]                                   ]))
+                              )}]
+           ]]))]))

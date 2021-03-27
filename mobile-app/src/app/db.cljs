@@ -5,10 +5,10 @@
 
 (def feed-item-data-spec
   (ds/spec {:name ::feed-item-ds
-            :spec {:feed-item/id          uuid?
+            :spec {:feed-item/id          string?
                    :feed-item/title       string?
                    :feed-item/image-url   (ds/maybe string?)
-                   :feed-item/description string?}}))
+                   :feed-item/description (ds/maybe string?)}}))
 
 (s/def ::feed-item feed-item-data-spec)
 
@@ -17,7 +17,8 @@
             :spec {:feed/id                 uuid?
                    :feed/url                string?
                    (ds/opt :feed/title)     string?
-                   (ds/opt :feed/image-url) string?}}))
+                   (ds/opt :feed/image-url) string?
+                   (ds/opt :feed/items)     [::feed-item]}}))
 
 (s/def ::feed feed-data-spec)
 

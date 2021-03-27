@@ -62,8 +62,9 @@
                               (>evt [:save-navigation current-route-name]))
                             (swap! !route-name-ref merge {:current current-route-name})))}
 
-      [:> (navigator) {:header-mode        "none"
-                       :initial-route-name (screen-key->name last-screen)} ;; this is for "hot reloading"
+      [:> (navigator) {:header-mode "none"
+                       ;; :initial-route-name (screen-key->name last-screen) ;; use this for editing a screen quickly without re-navigating on hot reload
+                       }
        (screen {:name      (:screen/feeds screen-key-name-mapping)
                 :component (paper/withTheme feeds-screen)})
        (screen {:name      (:screen/feed screen-key-name-mapping)
