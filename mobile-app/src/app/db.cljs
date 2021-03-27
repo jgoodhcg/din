@@ -29,7 +29,8 @@
                    :feeds         ::feeds
                    :modals        {:modal/feed-add    {:feed-add/visible boolean?}
                                    :modal/feed-remove {:feed-remove/id (ds/maybe uuid?)}}
-                   :selected-feed (ds/maybe uuid?)}
+                   :selected-feed (ds/maybe uuid?)
+                   :navigation    {:navigation/last-screen (ds/maybe keyword?)}}
             :name ::app-db}))
 
 (def default-app-db
@@ -68,4 +69,5 @@
               }
    :modals        {:modal/feed-add    {:feed-add/visible false}
                    :modal/feed-remove {:feed-remove/id nil}}
-   :selected-feed nil})
+   :selected-feed nil
+   :navigation    {:navigation/last-screen nil}})

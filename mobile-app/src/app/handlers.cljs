@@ -3,8 +3,9 @@
    [re-frame.core :refer [reg-event-db
                           ->interceptor
                           reg-event-fx]]
-   [com.rpl.specter :as sp :refer [setval transform select]]
+   [com.rpl.specter :as sp :refer [setval transform select select-one!]]
    [clojure.spec.alpha :as s]
+   [app.helpers :refer [screen-name->key]]
    [app.db :as db :refer [default-app-db app-db-spec]]))
 
 (defn check-and-throw
@@ -122,3 +123,17 @@
   (merge (->> cofx (setval [:db :selected-feed] feed-id))
          (when navigate {:navigate :screen/feed})))
 (reg-event-fx :select-feed [base-interceptors] select-feed)
+
+(defn save-navigation [db [_ route-name]]
+  (tap> {:location   "save-navigation"
+         :route-name route-name
+         :screen-key (screen-name->key route-name)})
+  (->> db (setval [:navigation :navigation/last-screen] (screen-name->key route-name))))
+(reg-event-db :save-navigation [base-interceptors] save-navigation)
+
+;; TODO justin 2021-03-27 is this even needed? I can't figure out how to use this without running in into a race condition with nav ref.
+(defn go-to-last-screen [cofx _]
+  (tap> {:location    "go-to-last-screen"
+         :last-screen (->> cofx (select-one! [:db :navigation :navigation/last-screen]))})
+  (->> cofx (merge {:navigate (->> cofx (select-one! [:db :navigation :navigation/last-screen]))})))
+(reg-event-fx :go-to-last-screen [base-interceptors] go-to-last-screen)

@@ -35,5 +35,4 @@
            [:> rn/ScrollView {:content-container-style (tw "flex justify-start flex-row flex-wrap")}
 
             [:> paper/Text (:feed/title selected-feed)]
-
             ]]]))]))

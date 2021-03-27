@@ -1,7 +1,9 @@
 (ns app.helpers
-  (:require [re-frame.core :refer [subscribe dispatch]]
-            ["tailwind-rn" :default tailwind-rn]
-            ))
+  (:require
+   [clojure.set :refer [map-invert]]
+   [re-frame.core :refer [subscribe dispatch]]
+   ["tailwind-rn" :default tailwind-rn]
+   ))
 
 (def <sub (comp deref subscribe))
 
@@ -15,3 +17,6 @@
 
 (def screen-key-name-mapping #:screen {:feed  "Feed"
                                        :feeds "Feeds"} )
+
+(defn screen-key->name [k] (get screen-key-name-mapping k))
+(defn screen-name->key [n] (-> screen-key-name-mapping map-invert (get n)))

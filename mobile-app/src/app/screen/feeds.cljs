@@ -67,10 +67,8 @@
                                (let [state (-> e (j/get-in [:nativeEvent :state]))]
                                  (when (= (j/get g/State :ACTIVE)
                                           state)
-                                   (do
-                                     (tap> "tapped")
-                                     (>evt [:select-feed {:feed-id  id
-                                                          :navigate true}])))))}
+                                   (>evt [:select-feed {:feed-id  id
+                                                        :navigate true}]))))}
      [:> rn/View
       [:> paper/Card {:key id}
        [:> paper/Card.Cover {:source      {:uri image-url}

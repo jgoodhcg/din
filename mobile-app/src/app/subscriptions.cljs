@@ -51,3 +51,7 @@
          :<- [:feeds-indexed]
          :<- [:selected-feed-id]
          selected-feed)
+
+(defn last-screen [db _]
+  (->> db (select-one! [:navigation :navigation/last-screen])))
+(reg-sub :last-screen last-screen)

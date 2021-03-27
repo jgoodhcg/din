@@ -22,7 +22,7 @@
    [app.fx :refer [!navigation-ref]]
    [app.handlers]
    [app.subscriptions]
-   [app.helpers :refer [<sub >evt screen-key-name-mapping]]
+   [app.helpers :refer [<sub >evt screen-key-name-mapping screen-key->name]]
    [app.screen.feeds :refer [root] :rename {root feeds-screen}]
    [app.screen.feed :refer [root] :rename {root feed-screen}]))
 
@@ -36,7 +36,8 @@
 
 (defn root []
   (let [theme           (<sub [:theme])
-        !route-name-ref (clojure.core/atom {})]
+        !route-name-ref (clojure.core/atom {})
+        last-screen     (<sub [:last-screen])]
 
     [:> paper/Provider
      {:theme (case theme
@@ -45,7 +46,8 @@
                paper/DarkTheme)}
 
      [:> nav/NavigationContainer
-      {:ref             (fn [el] (reset! !navigation-ref el))
+      {:ref             (fn [el]
+                          (reset! !navigation-ref el))
        :on-ready        (fn []
                           (swap! !route-name-ref merge {:current (-> @!navigation-ref
                                                                      (j/call :getCurrentRoute)
@@ -57,10 +59,11 @@
                                                        (j/get :name))]
                             (when (not= prev-route-name current-route-name)
                               ;; This is where you can do side effecty things like analytics
-                              (>evt [:some-fx-example (str "New screen encountered " current-route-name)]))
+                              (>evt [:save-navigation current-route-name]))
                             (swap! !route-name-ref merge {:current current-route-name})))}
 
-      [:> (navigator) {:header-mode "none"}
+      [:> (navigator) {:header-mode        "none"
+                       :initial-route-name (screen-key->name last-screen)} ;; this is for "hot reloading"
        (screen {:name      (:screen/feeds screen-key-name-mapping)
                 :component (paper/withTheme feeds-screen)})
        (screen {:name      (:screen/feed screen-key-name-mapping)
@@ -73,8 +76,7 @@
     (r/as-element ;; [root]
       [(r/adapt-react-class
          (withAuthenticator
-           (r/reactify-component root) (clj->js {:signUpConfig {:hiddenDefaults ["phone_number"]}})))]
-      )))
+           (r/reactify-component root) (clj->js {:signUpConfig {:hiddenDefaults ["phone_number"]}})))])))
 
 (defn init []
   (println "hellooooooooooo ----------------------------------------------------")
