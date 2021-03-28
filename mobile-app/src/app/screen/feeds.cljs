@@ -62,13 +62,9 @@
                                                state)
                                         (>evt [:event/modal-open-feed-remove id]))))}
 
-    [:> g/TapGestureHandler {:on-handler-state-change
-                             (fn [e]
-                               (let [state (-> e (j/get-in [:nativeEvent :state]))]
-                                 (when (= (j/get g/State :ACTIVE)
-                                          state)
-                                   (>evt [:event/select-feed {:feed-id  id
-                                                              :navigate true}]))))}
+    [:> g/RectButton {:on-press
+                      #(>evt [:event/select-feed {:feed-id  id
+                                                  :navigate true}])}
      [:> rn/View
       [:> paper/Card {:key id}
        [:> paper/Card.Cover {:source      {:uri image-url}
@@ -96,12 +92,12 @@
 (defn root [props]
   (r/as-element
     [(fn []
-       (let [theme-selection   (<sub [:theme])
+       (let [theme-selection   (<sub [:sub/theme])
              theme             (-> props (j/get :theme))
-             feeds             (<sub [:feeds])
-             feed-add-visible  (<sub [:modal-feed-add-visible])
-             feed-remove-id    (<sub [:modal-feed-remove-id])
-             feed-remove-title (<sub [:modal-feed-remove-title])
+             feeds             (<sub [:sub/feeds])
+             feed-add-visible  (<sub [:sub/modal-feed-add-visible])
+             feed-remove-id    (<sub [:sub/modal-feed-remove-id])
+             feed-remove-title (<sub [:sub/modal-feed-remove-title])
              width             (-> rn/Dimensions (j/call :get "window") (j/get :width))]
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}

@@ -24,7 +24,8 @@
    [app.subscriptions]
    [app.helpers :refer [<sub >evt screen-key-name-mapping screen-key->name]]
    [app.screen.feeds :refer [root] :rename {root feeds-screen}]
-   [app.screen.feed :refer [root] :rename {root feed-screen}]))
+   [app.screen.feed :refer [root] :rename {root feed-screen}]
+   [app.screen.feed-item :refer [root] :rename {root feed-item-screen}]))
 
 (def api-endpoint "https://yabrbam9si.execute-api.us-east-2.amazonaws.com/default/din-page-titles")
 
@@ -35,9 +36,9 @@
 (defn screen [props] [:> (-> stack (j/get :Screen)) props])
 
 (defn root []
-  (let [theme           (<sub [:theme])
+  (let [theme           (<sub [:sub/theme])
         !route-name-ref (clojure.core/atom {})
-        last-screen     (<sub [:last-screen])]
+        last-screen     (<sub [:sub/last-screen])]
 
     [:> paper/Provider
      {:theme (case theme
@@ -63,12 +64,14 @@
                             (swap! !route-name-ref merge {:current current-route-name})))}
 
       [:> (navigator) {:header-mode        "none"
-          ;;             :initial-route-name (screen-key->name last-screen) ;; use this for editing a screen quickly without re-navigating on hot reload
+                       :initial-route-name (screen-key->name last-screen) ;; use this for editing a screen quickly without re-navigating on hot reload
                        }
        (screen {:name      (:screen/feeds screen-key-name-mapping)
                 :component (paper/withTheme feeds-screen)})
        (screen {:name      (:screen/feed screen-key-name-mapping)
-                :component (paper/withTheme feed-screen)})]]]))
+                :component (paper/withTheme feed-screen)})
+       (screen {:name      (:screen/feed-item screen-key-name-mapping)
+                :component (paper/withTheme feed-item-screen)})]]]))
 
 (defn start
   {:dev/after-load true}

@@ -19,7 +19,7 @@
 (defn root [props]
   (r/as-element
     [(fn []
-       (let [{:feed/keys [title image-url items]} (<sub [:selected-feed])]
+       (let [{:feed/keys [title image-url items]} (<sub [:sub/selected-feed])]
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}
           [:> rn/StatusBar {:visibility "hidden"}]
@@ -34,16 +34,10 @@
              :key-extractor (fn [item] (-> item (j/get :id)))
              :render-item   (fn [obj]
                               (j/let [^:js {:keys [id title image-url]} (j/get obj :item)]
-
                                 (r/as-element
-                                  [:> g/TapGestureHandler {:on-handler-state-change
-                                                           (fn [e]
-                                                             (let [state (-> e (j/get-in [:nativeEvent :state]))]
-                                                               (when (= (j/get g/State :ACTIVE)
-                                                                        state)
-                                                                 (tap> {:location "feed item tap"})
-                                                                 (>evt [:event/select-feed-item {:feed-item/id id
-                                                                                                 :navigate     true}]))))}
+                                  [:> g/RectButton {:on-press
+                                                    #(>evt [:event/select-feed-item {:feed-item/id id
+                                                                                     :navigate     true}])}
                                    [:> rn/View {:key   id
                                                 :style (tw "mt-2 pl-2 w-9/12 flex flex-row")}
                                     [:> paper/Card.Cover {:source {:uri image-url}
