@@ -11,6 +11,7 @@
    [cljs.core.async.interop :refer [<p!]]
    [cljs-http.client :as http]
    [clojure.edn :as edn]
+   [tick.alpha.api :as t]
 
    [app.helpers :refer [>evt screen-key-name-mapping]]))
 
@@ -23,32 +24,48 @@
           <p!)))
 
 (defn dispatch-update-feed [id feed]
-  (>evt [:update-feed {:feed/id        id
-                       :feed/title     (-> feed (j/get :title))
-                       :feed/image-url (or (-> feed (j/get-in [:itunes :image]))
-                                           (-> feed (j/get-in [:image :url])))
-                       :feed/items     (-> feed
-                                           (j/get :items)
-                                           (->> (mapv (fn [item]
-                                                        ;; TODO justin 2021-03-14 use more of the itunes properties
-                                                        (j/let [^:js {:keys [id
-                                                                             title
-                                                                             imageUrl
-                                                                             description
-                                                                             itunes]} item
-                                                                ^:js {:keys [image]} itunes]
-                                                          {:feed-item/id          id
-                                                           :feed-item/title       title
-                                                           :feed-item/image-url   (or image imageUrl)
-                                                           :feed-item/description description})))))}]))
+  (>evt [:event/update-feed
+         {:feed/id        id
+          :feed/title     (-> feed (j/get :title))
+          :feed/image-url (or (-> feed (j/get-in [:itunes :image]))
+                              (-> feed (j/get-in [:image :url])))
+          :feed/items
+          (-> feed
+              (j/get :items)
+              (->> (mapv (fn [item]
+                           ;; TODO justin 2021-03-14 use more of the itunes properties
+                           (j/let [^:js {:keys [id
+                                                title
+                                                imageUrl
+                                                description
+                                                itunes
+                                                published
+                                                enclosures]} item
+                                   ^:js {:keys [image order]} itunes
+                                   ^:js {:keys [url length]} (first enclosures)]
+                             {id
+                              {:feed-item/id                id
+                               :feed-item/title             title
+                               :feed-item/image-url         (or image imageUrl)
+                               :feed-item/description       description
+                               :feed-item/playback-position 0
+                               :feed-item/length            length
+                               :feed-item/url               url
+                               :feed-item/published         (-> published
+                                                                js/Date.parse
+                                                                (t/new-duration :millis)
+                                                                t/instant
+                                                                t/format)
+                               :feed-item/order             order}})))
+                   (apply merge)))}]))
 
 (defn <refresh-feed [{:feed/keys [id url]}]
   (go
     (let [feed (<! (<get-feed url))]
       (dispatch-update-feed id feed))))
-(reg-fx :refresh-feed <refresh-feed)
+(reg-fx :effect/refresh-feed <refresh-feed)
 
-(reg-fx :refresh-feeds
+(reg-fx :effect/refresh-feeds
         (fn [feeds]
           (doall (->> feeds (map <refresh-feed)))))
 
@@ -56,7 +73,7 @@
 
 (def app-db-file (str dd "app-db.edn"))
 
-(reg-fx :persist
+(reg-fx :effect/persist
         (fn [app-db-str]
           (println "persist fx ----------------------------------------------------")
           (-> fs (j/call :writeAsStringAsync
@@ -68,7 +85,7 @@
                  (j/get :manifest)
                  (j/get :version)))
 
-(reg-fx :load
+(reg-fx :effect/load
         (fn []
           (println "load fx ----------------------------------------------------")
           (tap> {:location "load fx"})
@@ -85,8 +102,8 @@
                        (do
                          (-> rn/Alert (j/call :alert "App-db did not exist"))
                          (println "load fx: file does NOT exist -------------------------------")
-                         (>evt [:set-version version])
-                         (>evt [:refresh-feeds]))
+                         (>evt [:event/set-version version])
+                         (>evt [:event/refresh-feeds]))
                        ;; file exists load db
                        (go
                          (try
@@ -94,8 +111,8 @@
                            (-> fs (j/call :readAsStringAsync app-db-file)
                                <p!
                                edn/read-string
-                               (#(>evt [:load-app-db {:app-db  %
-                                                      :version version}])))
+                               (#(>evt [:event/load-app-db {:app-db  %
+                                                            :version version}])))
                            (catch js/Object e
                              (-> rn/Alert (j/call :alert "Failure on readAsStringAsync" (str e))))))))))
               (catch js/Object e
@@ -115,4 +132,4 @@
   (-> @!navigation-ref
       ;; no params yet for second arg
       (j/call :navigate (get screen-key-name-mapping screen-key) (j/lit {}))))
-(reg-fx :navigate navigate)
+(reg-fx :effect/navigate navigate)

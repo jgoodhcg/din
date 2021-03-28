@@ -59,11 +59,11 @@
                                                        (j/get :name))]
                             (when (not= prev-route-name current-route-name)
                               ;; This is where you can do side effecty things like analytics
-                              (>evt [:save-navigation current-route-name]))
+                              (>evt [:event/save-navigation current-route-name]))
                             (swap! !route-name-ref merge {:current current-route-name})))}
 
-      [:> (navigator) {:header-mode "none"
-                       ;; :initial-route-name (screen-key->name last-screen) ;; use this for editing a screen quickly without re-navigating on hot reload
+      [:> (navigator) {:header-mode        "none"
+          ;;             :initial-route-name (screen-key->name last-screen) ;; use this for editing a screen quickly without re-navigating on hot reload
                        }
        (screen {:name      (:screen/feeds screen-key-name-mapping)
                 :component (paper/withTheme feeds-screen)})
@@ -82,8 +82,8 @@
 (defn init []
   (println "hellooooooooooo ----------------------------------------------------")
   (j/call Amplify :configure aws-config)
-  (dispatch-sync [:initialize-db])
-  (dispatch-sync [:trigger-load-db])
+  (dispatch-sync [:event/initialize-db])
+  (dispatch-sync [:event/trigger-load-db])
   (start))
 
 (comment

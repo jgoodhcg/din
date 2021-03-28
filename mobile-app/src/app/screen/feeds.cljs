@@ -21,22 +21,22 @@
 (defn modal-add [{:keys [feed-add-visible]}]
   [:> paper/Portal
    [:> paper/Modal {:visible                 feed-add-visible
-                    :on-dismiss              #(>evt [:modal-toggle-feed-add])
+                    :on-dismiss              #(>evt [:event/modal-toggle-feed-add])
                     :content-container-style (tw "m-4")}
     [:> paper/Surface {:style (tw "p-4")}
      [:> paper/TextInput {:label          "Feed URL"
                           :on-change-text #(reset! feed-input %)}]
      [:> paper/Button {:style    (tw "m-4")
                        :on-press #(do
-                                    (>evt [:modal-toggle-feed-add])
-                                    (>evt [:add-feed @feed-input])) } "save"]
+                                    (>evt [:event/modal-toggle-feed-add])
+                                    (>evt [:event/add-feed @feed-input])) } "save"]
      [:> paper/Button {:style    (tw "m-4")
-                       :on-press #(>evt [:modal-toggle-feed-add])} "cancel"]]]])
+                       :on-press #(>evt [:event/modal-toggle-feed-add])} "cancel"]]]])
 
 (defn modal-remove [{:keys [feed-remove-id feed-remove-title]}]
   [:> paper/Portal
    [:> paper/Modal {:visible                 (some? feed-remove-id)
-                    :on-dismiss              #(>evt [:modal-toggle-feed-add])
+                    :on-dismiss              #(>evt [:event/modal-toggle-feed-add])
                     :content-container-style (tw "m-4")}
     [:> paper/Surface {:style (tw "p-4 justify-center")}
 
@@ -47,10 +47,10 @@
                        :icon     "delete"
                        :color    "red"
                        :on-press #(do
-                                    (>evt [:modal-close-feed-remove])
-                                    (>evt [:remove-feed feed-remove-id])) } "remove"]
+                                    (>evt [:event/modal-close-feed-remove])
+                                    (>evt [:event/remove-feed feed-remove-id])) } "remove"]
      [:> paper/Button {:style    (tw "m-4")
-                       :on-press #(>evt [:modal-close-feed-remove])} "cancel"]]]])
+                       :on-press #(>evt [:event/modal-close-feed-remove])} "cancel"]]]])
 
 (defn feed-card [{:keys [id image-url title width]}]
   [:> rn/View {:key id}
@@ -60,15 +60,15 @@
                                     (let [state (-> e (j/get-in [:nativeEvent :state]))]
                                       (when (= (j/get g/State :ACTIVE)
                                                state)
-                                        (>evt [:modal-open-feed-remove id]))))}
+                                        (>evt [:event/modal-open-feed-remove id]))))}
 
     [:> g/TapGestureHandler {:on-handler-state-change
                              (fn [e]
                                (let [state (-> e (j/get-in [:nativeEvent :state]))]
                                  (when (= (j/get g/State :ACTIVE)
                                           state)
-                                   (>evt [:select-feed {:feed-id  id
-                                                        :navigate true}]))))}
+                                   (>evt [:event/select-feed {:feed-id  id
+                                                              :navigate true}]))))}
      [:> rn/View
       [:> paper/Card {:key id}
        [:> paper/Card.Cover {:source      {:uri image-url}
@@ -91,7 +91,7 @@
     [:> paper/IconButton {:icon     "plus"
                           :size     50
                           :color    "grey"
-                          :on-press #(>evt [:modal-toggle-feed-add])}]]])
+                          :on-press #(>evt [:event/modal-toggle-feed-add])}]]])
 
 (defn root [props]
   (r/as-element

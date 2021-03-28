@@ -1,6 +1,6 @@
 (ns app.subscriptions
   (:require [re-frame.core :refer [reg-sub]]
-            [com.rpl.specter :as sp :refer [select-one! select]]))
+            [com.rpl.specter :as sp :refer [select-one! select transform]]))
 
 (defn version [db _]
   (->> db
@@ -42,11 +42,18 @@
          modal-feed-remove-title)
 
 (defn selected-feed-id [db _]
-  (->> db (select-one! [:selected-feed])))
+  (->> db (select-one! [:selected/feed])))
 (reg-sub :selected-feed-id selected-feed-id)
 
 (defn selected-feed [[feeds-indexed selected-feed-id] _]
-  (->> feeds-indexed (select-one! [(sp/keypath selected-feed-id)])))
+  (tap> {:location      "selected-feed"
+         :id            selected-feed-id
+         :selected-feed (->> feeds-indexed
+                             (select-one! [(sp/keypath selected-feed-id)])
+                             (transform [:feed/items] vals))})
+  (->> feeds-indexed
+       (select-one! [(sp/keypath selected-feed-id)])
+       (transform [:feed/items] #(->> % vals (sort-by :feed-item/published) reverse))))
 (reg-sub :selected-feed
          :<- [:feeds-indexed]
          :<- [:selected-feed-id]

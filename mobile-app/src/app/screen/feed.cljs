@@ -34,13 +34,22 @@
              :key-extractor (fn [item] (-> item (j/get :id)))
              :render-item   (fn [obj]
                               (j/let [^:js {:keys [id title image-url]} (j/get obj :item)]
+
                                 (r/as-element
-                                  [:> rn/View {:key   id
-                                               :style (tw "mt-2 pl-2 w-9/12 flex flex-row")}
-                                   [:> paper/Card.Cover {:source {:uri image-url}
-                                                         :style  (tw "w-20 h-20 mr-2")}]
-                                   [:> rn/View {:style (tw "flex flex-col")}
-                                    [:> paper/Text {:style (tw "pr-2")} title]
-                                    [:> paper/Text {:style (tw "text-gray-500")} "timeline here"]]                                   ]))
+                                  [:> g/TapGestureHandler {:on-handler-state-change
+                                                           (fn [e]
+                                                             (let [state (-> e (j/get-in [:nativeEvent :state]))]
+                                                               (when (= (j/get g/State :ACTIVE)
+                                                                        state)
+                                                                 (tap> {:location "feed item tap"})
+                                                                 (>evt [:event/select-feed-item {:feed-item/id id
+                                                                                                 :navigate     true}]))))}
+                                   [:> rn/View {:key   id
+                                                :style (tw "mt-2 pl-2 w-9/12 flex flex-row")}
+                                    [:> paper/Card.Cover {:source {:uri image-url}
+                                                          :style  (tw "w-20 h-20 mr-2")}]
+                                    [:> rn/View {:style (tw "flex flex-col")}
+                                     [:> paper/Text {:style (tw "pr-2")} title]
+                                     [:> paper/Text {:style (tw "text-gray-500")} "timeline here"]]                                   ]]))
                               )}]
            ]]))]))
