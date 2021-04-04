@@ -42,7 +42,7 @@
          modal-feed-remove-title)
 
 (defn selected-feed-id [db _]
-  (->> db (select-one! [:selected/feed])))
+  (->> db (select-one! [:selected :selected-feed/id])))
 (reg-sub :sub/selected-feed-id selected-feed-id)
 
 (defn selected-feed [[feeds-indexed selected-feed-id] _]
@@ -59,7 +59,7 @@
 (reg-sub :sub/last-screen last-screen)
 
 (defn selected-feed-item-id [db _]
-  (->> db (select-one! [:selected/feed-item])))
+  (->> db (select-one! [:selected :selected-feed/item-id])))
 (reg-sub :sub/selected-feed-item-id selected-feed-item-id)
 
 (defn selected-feed-item [[feeds-indexed

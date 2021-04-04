@@ -18,6 +18,7 @@
     "aws-amplify": "^3.3.21",
     "aws-amplify-react-native": "^4.3.1",
     "expo": "^40.0.0",
+    "expo-av": "~8.7.0",
     "expo-file-system": "~9.3.0",
     "react": "16.13.1",
     "react-dom": "16.13.1",

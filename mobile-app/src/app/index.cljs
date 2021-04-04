@@ -16,13 +16,13 @@
    [cljs.core.async.interop :refer [<p!]]
    [cljs-http.client :as http]
    [reagent.core :as r]
-   [re-frame.core :refer [dispatch-sync]]
+   [re-frame.core]
    [shadow.expo :as expo]
 
    [app.fx :refer [!navigation-ref]]
    [app.handlers]
    [app.subscriptions]
-   [app.helpers :refer [<sub >evt screen-key-name-mapping screen-key->name]]
+   [app.helpers :refer [<sub >evt >evt-sync screen-key-name-mapping screen-key->name]]
    [app.screen.feeds :refer [root] :rename {root feeds-screen}]
    [app.screen.feed :refer [root] :rename {root feed-screen}]
    [app.screen.feed-item :refer [root] :rename {root feed-item-screen}]))
@@ -85,8 +85,8 @@
 (defn init []
   (println "hellooooooooooo ----------------------------------------------------")
   (j/call Amplify :configure aws-config)
-  (dispatch-sync [:event/initialize-db])
-  (dispatch-sync [:event/trigger-load-db])
+  (>evt-sync [:event/initialize-db])
+  (>evt [:event/trigger-load-db])
   (start))
 
 (comment

@@ -2,6 +2,7 @@
   (:require
    ["react-native-rss-parser" :as rss]
    ["react-native" :as rn]
+   ["expo-av" :as av]
    ["expo-file-system" :as fs]
    ["expo-constants" :as expo-constants]
 
@@ -13,7 +14,18 @@
    [clojure.edn :as edn]
    [tick.alpha.api :as t]
 
-   [app.helpers :refer [>evt screen-key-name-mapping]]))
+   [app.helpers :refer [>evt >evt-sync screen-key-name-mapping]]))
+
+(def dd (-> fs (j/get :documentDirectory)))
+
+(def app-db-file (str dd "app-db.edn"))
+
+(def version (-> expo-constants
+                 (j/get :default)
+                 (j/get :manifest)
+                 (j/get :version)))
+
+(def playback-object (atom (av/Audio.Sound.)))
 
 (defn <get-feed [url]
   (go (-> url
@@ -23,41 +35,35 @@
           (->> (j/call rss :parse))
           <p!)))
 
-(defn dispatch-update-feed [id feed]
+(defn dispatch-update-feed [feed-id feed]
   (>evt [:event/update-feed
-         {:feed/id        id
-          :feed/title     (-> feed (j/get :title))
-          :feed/image-url (or (-> feed (j/get-in [:itunes :image]))
-                              (-> feed (j/get-in [:image :url])))
-          :feed/items
-          (-> feed
-              (j/get :items)
-              (->> (mapv (fn [item]
-                           ;; TODO justin 2021-03-14 use more of the itunes properties
-                           (j/let [^:js {:keys [id
-                                                title
-                                                imageUrl
-                                                description
-                                                itunes
-                                                published
-                                                enclosures]} item
-                                   ^:js {:keys [image order]} itunes
-                                   ^:js {:keys [url length]} (first enclosures)]
-                             {id
-                              {:feed-item/id                id
-                               :feed-item/title             title
-                               :feed-item/image-url         (or image imageUrl)
-                               :feed-item/description       description
-                               :feed-item/playback-position 0
-                               :feed-item/length            length
-                               :feed-item/url               url
-                               :feed-item/published         (-> published
-                                                                js/Date.parse
-                                                                (t/new-duration :millis)
-                                                                t/instant
-                                                                t/format)
-                               :feed-item/order             order}})))
-                   (apply merge)))}]))
+         {:feed/id                feed-id
+          :feed/title             (-> feed (j/get :title))
+          :feed/image-url         (or (-> feed (j/get-in [:itunes :image]))
+                                      (-> feed (j/get-in [:image :url])))
+          :feed/items-not-indexed (-> feed
+                                      (j/get :items)
+                                      (->> (mapv (fn [item]
+                                                   (j/let [^:js {:keys [id
+                                                                        title
+                                                                        imageUrl
+                                                                        description
+                                                                        itunes
+                                                                        published
+                                                                        enclosures]} item
+                                                           ^:js {:keys [image order]} itunes
+                                                           ^:js {:keys [url length]} (first enclosures)]
+                                                     {:feed-item/id          id
+                                                      :feed-item/title       title
+                                                      :feed-item/image-url   (or image imageUrl)
+                                                      :feed-item/description description
+                                                      :feed-item/url         url
+                                                      :feed-item/published   (-> published
+                                                                                 js/Date.parse
+                                                                                 (t/new-duration :millis)
+                                                                                 t/instant
+                                                                                 t/format)
+                                                      :feed-item/order       order})))))}]))
 
 (defn <refresh-feed [{:feed/keys [id url]}]
   (go
@@ -69,21 +75,12 @@
         (fn [feeds]
           (doall (->> feeds (map <refresh-feed)))))
 
-(def dd (-> fs (j/get :documentDirectory)))
-
-(def app-db-file (str dd "app-db.edn"))
-
 (reg-fx :effect/persist
         (fn [app-db-str]
           (println "persist fx ----------------------------------------------------")
           (-> fs (j/call :writeAsStringAsync
                          app-db-file
                          app-db-str))))
-
-(def version (-> expo-constants
-                 (j/get :default)
-                 (j/get :manifest)
-                 (j/get :version)))
 
 (reg-fx :effect/load
         (fn []
@@ -133,3 +130,67 @@
       ;; no params yet for second arg
       (j/call :navigate (get screen-key-name-mapping screen-key) (j/lit {}))))
 (reg-fx :effect/navigate navigate)
+
+(reg-fx :effect/load-playback-object
+        (fn [{:feed-item/keys [url playback-position]
+             feed-item-id    :feed-item/id
+             feed-id         :feed/id}]
+          (tap> {:location :effect/load-playback-object :url url})
+          (go
+            ;; unload the old selected item
+            (-> @playback-object
+                (j/call :unloadAsync)
+                <p!)
+            ;; load the new item
+            (-> @playback-object
+                (j/call :loadAsync
+                        (j/lit {:uri url})
+                        (j/lit {:positionMillis playback-position}))
+                <p!
+                ;; set duration and position for new item
+                ((fn [load-result]
+                   (>evt [:event/update-feed-item
+                          {:feed-item/id       feed-item-id
+                           :feed/id            feed-id
+                           :feed-item/duration (j/get load-result :durationMillis)
+                           :feed-item/position (j/get load-result :positionMillis)}]))))
+            ;; set playback status update fn
+            (-> @playback-object
+                (j/call :setOnPlaybackStatusUpdate
+                        (fn [AVPlaybackStatus]
+                          (j/let [^:js {:keys [isLoaded
+                                               isPlaying
+                                               didJustFinish
+                                               positionMillis
+                                               durationMillis]}
+                                  AVPlaybackStatus
+
+                                  status
+                                  (if isLoaded
+                                    (if isPlaying
+                                      :status/playing
+                                      (if didJustFinish
+                                        :status/stopped
+                                        :status/paused))
+                                    ;; TODO justin 2021-04-05 should `isBuffering` be used here?
+                                    ;; it seems like there could be an instance where nothing is loaded
+                                    ;; and it just sits with a spinner otherwise
+                                    :status/loading)]
+                            (tap> {:location "playback status update"
+                                   :status   AVPlaybackStatus})
+                            (>evt [:event/update-feed-item
+                                   {:feed-item/id       feed-item-id
+                                    :feed/id            feed-id
+                                    :feed-item/duration (j/get AVPlaybackStatus :durationMillis)
+                                    :feed-item/position (j/get AVPlaybackStatus :positionMillis)}])
+                            (>evt [:event/update-selected-item-status
+                                   {:status status}]))))))))
+
+(comment
+  (go
+    (-> @playback-object
+        ;; (j/call :getStatusAsync)
+        (j/call :pauseAsync)
+        <p!
+        tap>))
+  )

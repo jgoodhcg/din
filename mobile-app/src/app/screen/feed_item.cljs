@@ -27,8 +27,8 @@
              position-str   "00:00"
              notes          []
              selected-note  nil
-             playing        :stopped
-             playback       nil
+             playing        :stopped ;; playback state
+             playback       nil      ;; the sound object (can we get playback state from this?)
              ]
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}

@@ -5,11 +5,12 @@
 
 (def feed-item-data-spec
   (ds/spec {:name ::feed-item-ds
-            :spec {:feed-item/id                string?
-                   :feed-item/title             string?
-                   :feed-item/image-url         (ds/maybe string?)
-                   :feed-item/description       (ds/maybe string?)
-                   :feed-item/playback-position integer?}}))
+            :spec {:feed-item/id                         string?
+                   :feed-item/title                      string?
+                   :feed-item/image-url                  (ds/maybe string?)
+                   :feed-item/description                (ds/maybe string?)
+                   (ds/opt :feed-item/playback-position) integer?
+                   (ds/opt :feed-item/duration)          integer?}}))
 
 (s/def ::feed-item feed-item-data-spec)
 
@@ -28,14 +29,18 @@
 (s/def ::feeds (s/and map? (s/every-kv uuid? ::feed)))
 
 (def app-db-spec
-  (ds/spec {:spec {:settings           {:theme (s/spec #{:light :dark})}
-                   :version            string?
-                   :feeds              ::feeds
-                   :modals             {:modal/feed-add    {:feed-add/visible boolean?}
-                                        :modal/feed-remove {:feed-remove/id (ds/maybe uuid?)}}
-                   :selected/feed      (ds/maybe uuid?)
-                   :selected/feed-item (ds/maybe string?)
-                   :navigation         {:navigation/last-screen (ds/maybe keyword?)}}
+  (ds/spec {:spec {:settings   {:theme (s/spec #{:light :dark})}
+                   :version    string?
+                   :feeds      ::feeds
+                   :modals     {:modal/feed-add    {:feed-add/visible boolean?}
+                                :modal/feed-remove {:feed-remove/id (ds/maybe uuid?)}}
+                   :selected   {:selected-feed/id          (ds/maybe uuid?)
+                                :selected-feed/item-id     (ds/maybe string?)
+                                :selected-feed/item-status (ds/maybe (s/spec #{:status/playing
+                                                                               :status/loading
+                                                                               :status/paused
+                                                                               :status/stopped})) }
+                   :navigation {:navigation/last-screen (ds/maybe keyword?)}}
             :name ::app-db}))
 
 (def default-app-db
@@ -72,8 +77,9 @@
               {:feed/url "https://feeds.transistor.fm/software-social"
                :feed/id  #uuid "cca6a4b3-23aa-4055-a72f-0286108492ea"}
               }
-   :modals             {:modal/feed-add    {:feed-add/visible false}
-                        :modal/feed-remove {:feed-remove/id nil}}
-   :selected/feed      nil
-   :selected/feed-item nil
-   :navigation         {:navigation/last-screen nil}})
+   :modals     {:modal/feed-add    {:feed-add/visible false}
+                :modal/feed-remove {:feed-remove/id nil}}
+   :selected   {:selected-feed/id          nil
+                :selected-feed/item-id     nil
+                :selected-feed/item-status nil}
+   :navigation {:navigation/last-screen nil}})

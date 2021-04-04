@@ -1,13 +1,15 @@
 (ns app.helpers
   (:require
    [clojure.set :refer [map-invert]]
-   [re-frame.core :refer [subscribe dispatch]]
+   [re-frame.core :refer [subscribe dispatch dispatch-sync]]
    ["tailwind-rn" :default tailwind-rn]
    ))
 
 (def <sub (comp deref subscribe))
 
 (def >evt dispatch)
+
+(def >evt-sync dispatch-sync)
 
 (defn tw [style-str]
   ;; https://github.com/vadimdemedes/tailwind-rn#supported-utilities

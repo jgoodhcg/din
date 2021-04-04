@@ -19,7 +19,8 @@
 (defn root [props]
   (r/as-element
     [(fn []
-       (let [{:feed/keys [title image-url items]} (<sub [:sub/selected-feed])]
+       (let [{:feed/keys [title image-url items]
+              feed-id    :feed/id} (<sub [:sub/selected-feed])]
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}
           [:> rn/StatusBar {:visibility "hidden"}]
@@ -37,6 +38,7 @@
                                 (r/as-element
                                   [:> g/RectButton {:on-press
                                                     #(>evt [:event/select-feed-item {:feed-item/id id
+                                                                                     :feed/id      feed-id
                                                                                      :navigate     true}])}
                                    [:> rn/View {:key   id
                                                 :style (tw "mt-2 pl-2 w-9/12 flex flex-row")}
