@@ -15,6 +15,40 @@
 
    [app.helpers :refer [<sub >evt tw]]))
 
+(defn progress-bar [{:keys [progress-width duration-str position-str notes selected-note]}]
+  [:> rn/View {:style (tw "mt-2 px-2 h-80")}
+   [:> rn/View {:style (tw "h-full w-full")}
+    ;; progress bar
+    [:> rn/View {:style (tw "absolute left-0 w-full h-4 bg-purple-400 opacity-50 rounded") }]
+    [:> rn/View {:style (merge {:width progress-width}
+                               (tw "absolute left-0 h-4 bg-purple-400 rounded-l"))}]
+    [:> rn/View {:style (tw "absolute right-0 top-4")}
+     [:> paper/Text {:style (tw "text-gray-400")} duration-str]]
+    [:> rn/View {:style (tw "absolute left-0 top-4")}
+     [:> paper/Text {:style (tw "text-gray-400")} position-str]]
+
+    ;; notes
+    (for [{:keys [left]} notes]
+      [:> rn/View {:key   (random-uuid)
+                   :style (merge {:left left} (tw "absolute w-1 h-4 bg-gray-200"))}])
+
+    ;; selected note
+    (when-some [{:keys [left]} selected-note]
+      [:> rn/View {:style (merge {:left left} (tw "absolute -top-1 w-1 h-12 bg-yellow-400 rounded-t"))}])
+
+    (when (some? selected-note)
+      [:> rn/View {:style (tw "absolute left-0 top-11 w-full h-64 bg-gray-700 border-4 border-yellow-400 rounded")}
+       [:> rn/View {:style (tw "p-4")}
+        [:> paper/Text "my text input goes here"]
+        ;; [my-text-input] ;; TODO
+        ]])
+
+    (when (some? selected-note)
+      [:> rn/View {:style (tw "absolute right-2 bottom-6")}
+       [:> paper/IconButton {:icon     "share"
+                             :on-press #(>evt [:on-share])
+                             :size     24}]])]])
+
 (defn root [props]
   (r/as-element
     [(fn []
@@ -45,40 +79,7 @@
               [:> paper/Title feed-title]
               [:> paper/Text title]]]
 
-            ;; progress bar and notes
-            ;; TODO componetize this and use it on feed screen
-            [:> rn/View {:style (tw "mt-2 px-2 h-80")}
-             [:> rn/View {:style (tw "h-full w-full")}
-              ;; progress bar
-              [:> rn/View {:style (tw "absolute left-0 w-full h-4 bg-purple-400 opacity-50 rounded") }]
-              [:> rn/View {:style (merge {:width progress-width}
-                                         (tw "absolute left-0 h-4 bg-purple-400 rounded-l"))}]
-              [:> rn/View {:style (tw "absolute right-0 top-4")}
-               [:> paper/Text {:style (tw "text-gray-400")} duration-str]]
-              [:> rn/View {:style (tw "absolute left-0 top-4")}
-               [:> paper/Text {:style (tw "text-gray-400")} position-str]]
-
-              ;; notes
-              (for [{:keys [left]} notes]
-                [:> rn/View {:key   (random-uuid)
-                             :style (merge {:left left} (tw "absolute w-1 h-4 bg-gray-200 "))}])
-
-              ;; selected note
-              (when-some [{:keys [left]} selected-note]
-                [:> rn/View {:style (merge {:left left} (tw "absolute -top-1 w-1 h-12 bg-yellow-400 rounded-t"))}])
-
-              (when (some? selected-note)
-                [:> rn/View {:style (tw "absolute left-0 top-11 w-full h-64 bg-gray-700 border-4 border-yellow-400 rounded")}
-                 [:> rn/View {:style (tw "p-4")}
-                  [:> paper/Text "my text input goes here"]
-                  ;; [my-text-input] ;; TODO
-                  ]])
-
-              (when (some? selected-note)
-                [:> rn/View {:style (tw "absolute right-2 bottom-6")}
-                 [:> paper/IconButton {:icon     "share"
-                                       :on-press #(>evt [:on-share])
-                                       :size     24}]])]]
+            [progress-bar (p/map-of progress-width duration-str position-str notes selected-note)]
 
             ;; controlls
             [:> rn/View {:style (tw "flex flex-row justify-between items-center px-4 h-32")}

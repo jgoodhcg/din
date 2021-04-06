@@ -77,7 +77,6 @@
 
 (reg-fx :effect/persist
         (fn [app-db-str]
-          (println "persist fx ----------------------------------------------------")
           (-> fs (j/call :writeAsStringAsync
                          app-db-file
                          app-db-str))))

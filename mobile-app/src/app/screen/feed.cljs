@@ -16,6 +16,20 @@
 
    [app.helpers :refer [<sub >evt tw]]))
 
+(defn progress-bar [{:keys [progress-width notes]}]
+  [:> rn/View {:style (tw "mt-2 px-2 h-8")}
+   [:> rn/View {:style (tw "h-full w-full")}
+
+    ;; progress bar
+    [:> rn/View {:style (tw "absolute left-0 w-full h-4 bg-purple-400 opacity-50 rounded") }]
+    [:> rn/View {:style (merge {:width progress-width}
+                               (tw "absolute left-0 h-4 bg-purple-400 rounded-l"))}]
+
+    ;; notes
+    (for [{:keys [left]} notes]
+      [:> rn/View {:key   (random-uuid)
+                   :style (merge {:left left} (tw "absolute w-1 h-4 bg-gray-200"))}])]])
+
 (defn root [props]
   (r/as-element
     [(fn []
@@ -34,7 +48,10 @@
             {:data          (j/lit items)
              :key-extractor (fn [item] (-> item (j/get :id)))
              :render-item   (fn [obj]
-                              (j/let [^:js {:keys [id title image-url]} (j/get obj :item)]
+                              (j/let [^:js {:keys [id title image-url]} (j/get obj :item)
+                                      progress-width (str (rand-int 75) "%")
+                                      notes          (->> (range (rand-int 10))
+                                                          (map (fn [_] {:left (str (rand-int 75) "%")})))]
                                 (r/as-element
                                   [:> g/RectButton {:on-press
                                                     #(>evt [:event/select-feed-item {:feed-item/id id
@@ -44,8 +61,10 @@
                                                 :style (tw "mt-2 pl-2 w-9/12 flex flex-row")}
                                     [:> paper/Card.Cover {:source {:uri image-url}
                                                           :style  (tw "w-20 h-20 mr-2")}]
-                                    [:> rn/View {:style (tw "flex flex-col")}
+                                    [:> rn/View {:style (tw "flex flex-col w-full justify-center")}
                                      [:> paper/Text {:style (tw "pr-2")} title]
-                                     [:> paper/Text {:style (tw "text-gray-500")} "timeline here"]]                                   ]]))
+                                     [progress-bar
+                                      (p/map-of progress-width
+                                                notes)]]]]))
                               )}]
            ]]))]))
