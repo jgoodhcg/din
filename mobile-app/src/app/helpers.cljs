@@ -23,3 +23,27 @@
 
 (defn screen-key->name [k] (get screen-key-name-mapping k))
 (defn screen-name->key [n] (-> screen-key-name-mapping map-invert (get n)))
+
+(defn pad [n] (if (-> n str count (< 2))
+                (str "0" n)
+                (str n)))
+
+(defn millis->str [millis]
+  ;; TODO add padding
+  ;; https://stackoverflow.com/a/9763769/5040125
+  (let [ms   (rem millis 1000)
+        left (-> millis (- ms) (/ 1000))
+        sec  (-> left (rem 60))
+        left (-> left (- sec) (/ 60))
+        min  (-> left (rem 60))
+        hr   (-> left (- min) (/ 60))]
+    (str (pad hr) ":" (pad min) ":" (pad sec))))
+
+(defn percent-of-duration [position duration]
+  (if (and (some? position)
+           (some? duration))
+    (-> position
+        (/ duration)
+        (* 100)
+        (str "%"))
+    "0%"))

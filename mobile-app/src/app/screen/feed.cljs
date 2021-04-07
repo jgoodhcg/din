@@ -48,10 +48,7 @@
             {:data          (j/lit items)
              :key-extractor (fn [item] (-> item (j/get :id)))
              :render-item   (fn [obj]
-                              (j/let [^:js {:keys [id title image-url]} (j/get obj :item)
-                                      progress-width (str (rand-int 75) "%")
-                                      notes          (->> (range (rand-int 10))
-                                                          (map (fn [_] {:left (str (rand-int 75) "%")})))]
+                              (j/let [^:js {:keys [id title image-url progress-width notes]} (j/get obj :item)]
                                 (r/as-element
                                   [:> g/RectButton {:on-press
                                                     #(>evt [:event/select-feed-item {:feed-item/id id

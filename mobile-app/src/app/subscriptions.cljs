@@ -1,6 +1,7 @@
 (ns app.subscriptions
   (:require [re-frame.core :refer [reg-sub]]
-            [com.rpl.specter :as sp :refer [select-one! select transform]]))
+            [com.rpl.specter :as sp :refer [select-one! select transform]]
+            [app.helpers :refer [millis->str percent-of-duration]]))
 
 (defn version [db _]
   (->> db
@@ -48,7 +49,57 @@
 (defn selected-feed [[feeds-indexed selected-feed-id] _]
   (->> feeds-indexed
        (select-one! [(sp/keypath selected-feed-id)])
-       (transform [:feed/items] #(->> % vals (sort-by :feed-item/published) reverse))))
+
+       (transform [:feed/items sp/MAP-VALS]
+                  (fn [{:feed-item/keys [position duration]
+                       :as             item}]
+                    (let [progress-width (percent-of-duration
+                                           position
+                                           duration)]
+                      (-> item
+                          (merge
+                            #:feed-item {:progress-width progress-width
+                                         :duration-str   (millis->str duration)
+                                         :position-str   (millis->str position)})))))
+       ;; TODO collect duration
+       (transform [:feed/items sp/MAP-VALS
+                   (sp/collect (sp/submap [:feed-item/duration]))
+                   :feed-item/notes sp/MAP-VALS]
+                  (fn [[{duration :feed-item/duration}
+                       {:feed-item-note/keys [position]
+                        :as                  note}]]
+                    (-> note
+                        (merge
+                          {:feed-item-note/left
+                           (percent-of-duration
+                             position
+                             duration)}))))
+       (transform
+         [:feed/items]
+         #(->> % vals ;; this "un-indexes" the items
+               (sort-by :feed-item/published)
+               reverse))))
+
+(comment
+  (->> {:feed/items
+        {1 {:feed-item/duration 10
+            :feed-item/notes
+            {1 {:feed-item-note/position 4}
+             2 {:feed-item-note/position 5}}} }}
+       (transform [:feed/items
+                   sp/MAP-VALS
+                   (sp/collect (sp/submap [:feed-item/duration]))
+                   :feed-item/notes
+                   sp/MAP-VALS]
+                  (fn [[{duration :feed-item/duration}]
+                      {position :feed-item-note/position
+                       :as      note}]
+                    (merge note {:feed-item-note/left (+ position duration)}))
+                  )
+       ;; (map (fn [[[{duration :feed-item/duration}] {position :feed-item-note/position}]]
+       ;;        [duration position]))
+       )
+  )
 (reg-sub :sub/selected-feed
          :<- [:sub/feeds-indexed]
          :<- [:sub/selected-feed-id]

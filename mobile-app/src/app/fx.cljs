@@ -189,6 +189,7 @@
   (go
     (-> @playback-object
         ;; (j/call :getStatusAsync)
+        ;; (j/call :pauseAsync)
         (j/call :pauseAsync)
         <p!
         tap>))

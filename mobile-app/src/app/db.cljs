@@ -3,6 +3,16 @@
    [clojure.spec.alpha :as s]
    [spec-tools.data-spec :as ds]))
 
+(def feed-item-note-data-spec
+  (ds/spec {:name ::feed-item-note-ds
+            :spec {:feed-item-note/position integer?
+                   :feed-item-note/text     string?
+                   :feed-item-note/id       uuid?}}))
+
+(s/def ::feed-item-note feed-item-note-data-spec)
+
+(s/def ::feed-item-notes (s/and map? (s/every-kv string? ::feed-item-note)))
+
 (def feed-item-data-spec
   (ds/spec {:name ::feed-item-ds
             :spec {:feed-item/id                         string?
@@ -10,7 +20,8 @@
                    :feed-item/image-url                  (ds/maybe string?)
                    :feed-item/description                (ds/maybe string?)
                    (ds/opt :feed-item/playback-position) integer?
-                   (ds/opt :feed-item/duration)          integer?}}))
+                   (ds/opt :feed-item/duration)          integer?
+                   (ds/opt :feed-item/notes)             ::feed-item-notes}}))
 
 (s/def ::feed-item feed-item-data-spec)
 
