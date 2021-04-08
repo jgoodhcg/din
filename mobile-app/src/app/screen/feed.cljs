@@ -26,9 +26,9 @@
                                (tw "absolute left-0 h-4 bg-purple-400 rounded-l"))}]
 
     ;; notes
-    (for [{:keys [left]} notes]
+    (for [note notes] ;; notes are js objects because of flatlist
       [:> rn/View {:key   (random-uuid)
-                   :style (merge {:left left} (tw "absolute w-1 h-4 bg-gray-200"))}])]])
+                   :style (merge {:left (j/get note :left)} (tw "absolute w-1 h-4 bg-gray-200"))}])]])
 
 (defn root [props]
   (r/as-element
@@ -48,7 +48,12 @@
             {:data          (j/lit items)
              :key-extractor (fn [item] (-> item (j/get :id)))
              :render-item   (fn [obj]
-                              (j/let [^:js {:keys [id title image-url progress-width notes]} (j/get obj :item)]
+                              (j/let [^:js {:keys [id
+                                                   title
+                                                   image-url
+                                                   progress-width
+                                                   notes
+                                                   started]} (j/get obj :item)]
                                 (r/as-element
                                   [:> g/RectButton {:on-press
                                                     #(>evt [:event/select-feed-item {:feed-item/id id
@@ -60,8 +65,7 @@
                                                           :style  (tw "w-20 h-20 mr-2")}]
                                     [:> rn/View {:style (tw "flex flex-col w-full justify-center")}
                                      [:> paper/Text {:style (tw "pr-2")} title]
-                                     [progress-bar
-                                      (p/map-of progress-width
-                                                notes)]]]]))
-                              )}]
-           ]]))]))
+                                     (when started
+                                       [progress-bar
+                                        (p/map-of progress-width
+                                                  notes)])]]])))}]]]))]))

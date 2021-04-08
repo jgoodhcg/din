@@ -83,7 +83,9 @@
   (tap> {:location :event/update-feed
          :feed     feed})
   (->> cofx
-       (transform [:db :feeds (sp/keypath id)] #(merge % (dissoc feed :feed/items)))
+       (transform [:db :feeds (sp/keypath id)] #(merge % (dissoc feed
+                                                                 :feed/items
+                                                                 :feed/items-not-indexed)))
        (merge {:dispatch [:event/update-all-feed-items
                           (select-keys feed [:feed/id :feed/items-not-indexed])]})))
 (reg-event-fx :event/update-feed [base-interceptors] update-feed)

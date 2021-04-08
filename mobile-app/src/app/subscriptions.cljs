@@ -50,6 +50,7 @@
   (->> feeds-indexed
        (select-one! [(sp/keypath selected-feed-id)])
 
+       ;; Adds progress bar items
        (transform [:feed/items sp/MAP-VALS]
                   (fn [{:feed-item/keys [position duration]
                        :as             item}]
@@ -59,47 +60,35 @@
                       (-> item
                           (merge
                             #:feed-item {:progress-width progress-width
+                                         :started        (-> position (> 0))
                                          :duration-str   (millis->str duration)
                                          :position-str   (millis->str position)})))))
-       ;; TODO collect duration
+
+       ;; Adds note positioning info
        (transform [:feed/items sp/MAP-VALS
                    (sp/collect (sp/submap [:feed-item/duration]))
                    :feed-item/notes sp/MAP-VALS]
-                  (fn [[{duration :feed-item/duration}
-                       {:feed-item-note/keys [position]
-                        :as                  note}]]
+                  (fn [[{duration :feed-item/duration}]
+                      {:feed-item-note/keys [position]
+                       :as                  note}]
                     (-> note
                         (merge
                           {:feed-item-note/left
                            (percent-of-duration
                              position
                              duration)}))))
+
+       ;; "un-indexes" notes
+       (transform [:feed/items sp/MAP-VALS
+                   :feed-item/notes]
+                  #(->> % vals))
+
+       ;; "un-indexes" and sorts feeds
        (transform
          [:feed/items]
-         #(->> % vals ;; this "un-indexes" the items
+         #(->> % vals
                (sort-by :feed-item/published)
                reverse))))
-
-(comment
-  (->> {:feed/items
-        {1 {:feed-item/duration 10
-            :feed-item/notes
-            {1 {:feed-item-note/position 4}
-             2 {:feed-item-note/position 5}}} }}
-       (transform [:feed/items
-                   sp/MAP-VALS
-                   (sp/collect (sp/submap [:feed-item/duration]))
-                   :feed-item/notes
-                   sp/MAP-VALS]
-                  (fn [[{duration :feed-item/duration}]
-                      {position :feed-item-note/position
-                       :as      note}]
-                    (merge note {:feed-item-note/left (+ position duration)}))
-                  )
-       ;; (map (fn [[[{duration :feed-item/duration}] {position :feed-item-note/position}]]
-       ;;        [duration position]))
-       )
-  )
 (reg-sub :sub/selected-feed
          :<- [:sub/feeds-indexed]
          :<- [:sub/selected-feed-id]
@@ -126,3 +115,31 @@
          :<- [:sub/selected-feed-id]
          :<- [:sub/selected-feed-item-id]
          selected-feed-item)
+
+(comment
+  (->> @re-frame.db/app-db
+       (transform [:feeds sp/MAP-VALS :feed/items sp/MAP-VALS]
+                  (fn [item] (merge item
+                                   {:feed-item/position (rand-int 100)
+                                    :feed-item/duration 100
+                                    :feed-item/notes
+                                    (->> (range 10)
+                                         (map (fn [_]
+                                                (let [id (random-uuid)]
+                                                  {id #:feed-item-note {:position (rand-int 100)
+                                                                        :text     "test note"
+                                                                        :id       id}})))
+                                         (apply merge))
+                                    })))
+       (reset! re-frame.db/app-db)
+       (tap>)
+       )
+
+  (->> {:feeds {1 {:feed/items {1 {:feed-item/duration 100
+                                   :feed-item/notes    {1 {:position 10}}}}}}}
+       (transform [:feeds sp/MAP-VALS :feed/items sp/MAP-VALS
+                   (sp/collect (sp/submap [:feed-item/duration]))
+                   :feed-item/notes sp/MAP-VALS]
+                  (fn [a b] (tap> {:a a
+                                  :b b}))))
+  )

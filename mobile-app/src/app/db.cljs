@@ -11,7 +11,7 @@
 
 (s/def ::feed-item-note feed-item-note-data-spec)
 
-(s/def ::feed-item-notes (s/and map? (s/every-kv string? ::feed-item-note)))
+(s/def ::feed-item-notes (s/and map? (s/every-kv uuid? ::feed-item-note)))
 
 (def feed-item-data-spec
   (ds/spec {:name ::feed-item-ds
