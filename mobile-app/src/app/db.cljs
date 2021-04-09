@@ -35,7 +35,9 @@
                    :feed/url                string?
                    (ds/opt :feed/title)     string?
                    (ds/opt :feed/image-url) string?
-                   (ds/opt :feed/items)     ::feed-items}}))
+                   (ds/opt :feed/items)     ::feed-items
+                   (ds/opt :feed/item-sort) (s/spec #{:item-sort/ascending
+                                                      :item-sort/descending})}}))
 
 (s/def ::feed feed-data-spec)
 

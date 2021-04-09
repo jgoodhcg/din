@@ -49,7 +49,14 @@
 (defn selected-feed [[feeds-indexed selected-feed-id] _]
   (->> feeds-indexed
        (select-one! [(sp/keypath selected-feed-id)])
-
+       ;; Adds sort icon
+       (transform [] (fn [{:feed/keys [item-sort] :as feed}]
+                       (merge feed
+                              {:feed/item-sort-icon
+                               (case item-sort
+                                 :item-sort/ascending  "sort-ascending"
+                                 :item-sort/descending "sort-descending"
+                                 "sort-descending")})))
        ;; Adds progress bar items
        (transform [:feed/items sp/MAP-VALS]
                   (fn [{:feed-item/keys [position duration]
@@ -85,10 +92,18 @@
 
        ;; "un-indexes" and sorts feed items
        (transform
-         [:feed/items]
-         #(->> % vals
-               (sort-by :feed-item/published)
-               reverse))))
+         [(sp/submap [:feed/items :feed/item-sort])]
+         (fn [{items     :feed/items
+              item-sort :feed/item-sort}]
+           {:feed/items     (->> items
+                                 vals
+                                 (sort-by :feed-item/published)
+                                 ((fn [items]
+                                    (if (= :item-sort/descending item-sort)
+                                      items
+                                      (reverse items))))
+                                 vec)
+            :feed/item-sort item-sort}))))
 (reg-sub :sub/selected-feed
          :<- [:sub/feeds-indexed]
          :<- [:sub/selected-feed-id]

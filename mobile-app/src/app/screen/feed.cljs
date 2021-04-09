@@ -33,8 +33,11 @@
 (defn root [props]
   (r/as-element
     [(fn []
-       (let [{:feed/keys [title image-url items]
-              feed-id    :feed/id} (<sub [:sub/selected-feed])]
+       (let [{:feed/keys [title image-url items item-sort item-sort-icon]
+              feed-id    :feed/id} (<sub [:sub/selected-feed])
+             opposite-sort         (if (= :item-sort/ascending item-sort)
+                                     :item-sort/descending
+                                     :item-sort/ascending)]
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}
           [:> rn/StatusBar {:visibility "hidden"}]
@@ -45,21 +48,21 @@
             [:> paper/Card.Title {:title title}]
             [:> paper/Card.Actions
              [:> paper/IconButton {:icon     "checkbox-multiple-blank-outline"
-                                   :on-press #(>evt [:event/finished-override-all-items
+                                   :on-press #(>evt [:event/set-finished-override-all-items
                                                      {:feed/id feed-id
                                                       :feed-item/finished-override
                                                       :user-override/unfinished}])}]
 
              [:> paper/IconButton {:icon     "checkbox-multiple-marked"
-                                   :on-press #(>evt [:event/finished-override-all-items
+                                   :on-press #(>evt [:event/set-finished-override-all-items
                                                      {:feed/id feed-id
                                                       :feed-item/finished-override
                                                       :user-override/finished}])}]
 
-             [:> paper/IconButton {:icon "sort-ascending"}] ;; sort-descending
-             ;; `:event/set-item-sort-ascending` (takes feed-id)
-             ;; `:event/set-item-sort-descending` (takes feed-id)
-             ;; `:feed/sort` in db and included in selected-feed
+             [:> paper/IconButton {:icon     item-sort-icon
+                                   :on-press #(>evt [:event/set-feed-item-sort
+                                                     {:feed/id        feed-id
+                                                      :feed/item-sort opposite-sort}])}]
 
              [:> paper/IconButton {:icon "filter"}] ;; filter-outline
              ;; `:event/filter-finished` (takes feed-id)
