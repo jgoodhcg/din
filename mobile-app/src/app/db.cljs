@@ -21,7 +21,9 @@
                    :feed-item/description                (ds/maybe string?)
                    (ds/opt :feed-item/playback-position) integer?
                    (ds/opt :feed-item/duration)          integer?
-                   (ds/opt :feed-item/notes)             ::feed-item-notes}}))
+                   (ds/opt :feed-item/notes)             ::feed-item-notes
+                   (ds/opt :feed-item/finished-override) (s/spec #{:user-override/finished
+                                                                   :user-override/unfinished})}}))
 
 (s/def ::feed-item feed-item-data-spec)
 

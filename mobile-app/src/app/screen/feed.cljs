@@ -42,30 +42,63 @@
 
            [:> paper/Card {:style (tw "w-full")}
             [:> paper/Card.Cover {:source {:uri image-url}}]
-            [:> paper/Card.Title {:title title}]]
+            [:> paper/Card.Title {:title title}]
+            [:> paper/Card.Actions
+             [:> paper/IconButton {:icon     "checkbox-multiple-blank-outline"
+                                   :on-press #(>evt [:event/finished-override-all-items
+                                                     {:feed/id feed-id
+                                                      :feed-item/finished-override
+                                                      :user-override/unfinished}])}]
+
+             [:> paper/IconButton {:icon     "checkbox-multiple-marked"
+                                   :on-press #(>evt [:event/finished-override-all-items
+                                                     {:feed/id feed-id
+                                                      :feed-item/finished-override
+                                                      :user-override/finished}])}]
+
+             [:> paper/IconButton {:icon "sort-ascending"}] ;; sort-descending
+             ;; `:event/set-item-sort-ascending` (takes feed-id)
+             ;; `:event/set-item-sort-descending` (takes feed-id)
+             ;; `:feed/sort` in db and included in selected-feed
+
+             [:> paper/IconButton {:icon "filter"}] ;; filter-outline
+             ;; `:event/filter-finished` (takes feed-id)
+             ;; `:feed-item/filter-finished` in db and included in selected
+             ]]
 
            [:> rn/FlatList
             {:data          (j/lit items)
              :key-extractor (fn [item] (-> item (j/get :id)))
-             :render-item   (fn [obj]
-                              (j/let [^:js {:keys [id
-                                                   title
-                                                   image-url
-                                                   progress-width
-                                                   notes
-                                                   started]} (j/get obj :item)]
-                                (r/as-element
-                                  [:> g/RectButton {:on-press
-                                                    #(>evt [:event/select-feed-item {:feed-item/id id
-                                                                                     :feed/id      feed-id
-                                                                                     :navigate     true}])}
-                                   [:> rn/View {:key   id
-                                                :style (tw "mt-2 pl-2 w-9/12 flex flex-row")}
-                                    [:> paper/Card.Cover {:source {:uri image-url}
-                                                          :style  (tw "w-20 h-20 mr-2")}]
-                                    [:> rn/View {:style (tw "flex flex-col w-full justify-center")}
-                                     [:> paper/Text {:style (tw "pr-2")} title]
-                                     (when started
-                                       [progress-bar
-                                        (p/map-of progress-width
-                                                  notes)])]]])))}]]]))]))
+             :render-item
+             (fn [obj]
+               (j/let [^:js {:keys [id
+                                    title
+                                    finished-override
+                                    image-url
+                                    progress-width
+                                    notes
+                                    started]} (j/get obj :item)]
+                 (r/as-element
+                   [:> g/LongPressGestureHandler
+                    {:on-handler-state-change
+                     (fn [e]
+                       (let [state (-> e (j/get-in [:nativeEvent :state]))]
+                         (when (= (j/get g/State :ACTIVE)
+                                  state)
+                           (tap> {:location "long press on item"}))))}
+
+                    [:> g/RectButton {:on-press
+                                      #(>evt [:event/select-feed-item {:feed-item/id id
+                                                                       :feed/id      feed-id
+                                                                       :navigate     true}])}
+                     [:> rn/View {:key   id
+                                  :style (tw "mt-2 pl-2 w-9/12 flex flex-row")}
+                      [:> paper/Card.Cover {:source {:uri image-url}
+                                            :style  (tw "w-20 h-20 mr-2")}]
+                      [:> rn/View {:style (tw "flex flex-col w-full justify-center")}
+                       [:> paper/Text {:style (tw "pr-2")} title]
+                       [:> paper/Text {:style (tw "pr-2")} finished-override]
+                       (when started
+                         [progress-bar
+                          (p/map-of progress-width
+                                    notes)])]]]])))}]]]))]))

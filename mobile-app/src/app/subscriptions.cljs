@@ -83,7 +83,7 @@
                    :feed-item/notes]
                   #(->> % vals))
 
-       ;; "un-indexes" and sorts feeds
+       ;; "un-indexes" and sorts feed items
        (transform
          [:feed/items]
          #(->> % vals

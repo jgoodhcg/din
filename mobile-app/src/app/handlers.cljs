@@ -200,6 +200,12 @@
   (->> db (setval [:selected :selected-feed/item-status] status)))
 (reg-event-db :event/update-selected-item-status [base-interceptors] update-selected-item-status)
 
+(defn finished-override-all-items [db [_ {feed-id   :feed/id
+                                          user-mark :feed-item/finished-override}]]
+  (->> db (transform [:feeds (sp/keypath feed-id) :feed/items sp/MAP-VALS]
+                     (fn [item] (merge item {:feed-item/finished-override user-mark})))))
+(reg-event-db :event/finished-override-all-items [base-interceptors] finished-override-all-items)
+
 (comment
   (->> @re-frame.db/app-db
        (select-one! [:feeds
