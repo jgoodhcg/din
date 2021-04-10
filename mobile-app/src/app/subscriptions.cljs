@@ -1,7 +1,8 @@
 (ns app.subscriptions
   (:require [re-frame.core :refer [reg-sub]]
             [com.rpl.specter :as sp :refer [select-one! select transform]]
-            [app.helpers :refer [millis->str percent-of-duration]]))
+            [app.helpers :refer [millis->str percent-of-duration]]
+            [potpuri.core :as p]))
 
 (defn version [db _]
   (->> db
@@ -49,14 +50,18 @@
 (defn selected-feed [[feeds-indexed selected-feed-id] _]
   (->> feeds-indexed
        (select-one! [(sp/keypath selected-feed-id)])
-       ;; Adds sort icon
-       (transform [] (fn [{:feed/keys [item-sort] :as feed}]
+       ;; Adds sort and filter icon
+       (transform [] (fn [{:feed/keys [item-sort item-filter] :as feed}]
                        (merge feed
                               {:feed/item-sort-icon
                                (case item-sort
                                  :item-sort/ascending  "sort-ascending"
                                  :item-sort/descending "sort-descending"
-                                 "sort-descending")})))
+                                 "sort-descending")
+                               :feed/item-filter-icon
+                               (case item-filter
+                                 :item-filter/finished "filter"
+                                 "filter-outline")})))
        ;; Adds progress bar items
        (transform [:feed/items sp/MAP-VALS]
                   (fn [{:feed-item/keys [position duration]
@@ -90,20 +95,28 @@
                    :feed-item/notes]
                   #(->> % vals))
 
-       ;; "un-indexes" and sorts feed items
+       ;; "un-indexes", sorts, and filters feed items
        (transform
-         [(sp/submap [:feed/items :feed/item-sort])]
-         (fn [{items     :feed/items
-              item-sort :feed/item-sort}]
-           {:feed/items     (->> items
-                                 vals
-                                 (sort-by :feed-item/published)
-                                 ((fn [items]
-                                    (if (= :item-sort/descending item-sort)
-                                      items
-                                      (reverse items))))
-                                 vec)
-            :feed/item-sort item-sort}))))
+         [(sp/submap [:feed/items :feed/item-sort :feed/item-filter])]
+         (fn [{items       :feed/items
+              item-sort   :feed/item-sort
+              item-filter :feed/item-filter}]
+           {:feed/items       (->> items
+                                   vals
+                                   (remove (fn [{:feed-item/keys [finished-override
+                                                                 playback-position
+                                                                 duration]}]
+                                             (and (= item-filter :item-filter/finished)
+                                                  (or (= finished-override :user-override/finished)
+                                                      (-> playback-position (/ duration) (> 0.95))))))
+                                   (sort-by :feed-item/published)
+                                   ((fn [items]
+                                      (if (= :item-sort/descending item-sort)
+                                        items
+                                        (reverse items))))
+                                   vec)
+            :feed/item-sort   item-sort
+            :feed/item-filter item-filter}))))
 (reg-sub :sub/selected-feed
          :<- [:sub/feeds-indexed]
          :<- [:sub/selected-feed-id]

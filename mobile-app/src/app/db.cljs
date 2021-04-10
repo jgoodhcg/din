@@ -31,13 +31,14 @@
 
 (def feed-data-spec
   (ds/spec {:name ::feed-ds
-            :spec {:feed/id                 uuid?
-                   :feed/url                string?
-                   (ds/opt :feed/title)     string?
-                   (ds/opt :feed/image-url) string?
-                   (ds/opt :feed/items)     ::feed-items
-                   (ds/opt :feed/item-sort) (s/spec #{:item-sort/ascending
-                                                      :item-sort/descending})}}))
+            :spec {:feed/id                   uuid?
+                   :feed/url                  string?
+                   (ds/opt :feed/title)       string?
+                   (ds/opt :feed/image-url)   string?
+                   (ds/opt :feed/items)       ::feed-items
+                   (ds/opt :feed/item-sort)   (s/spec #{:item-sort/ascending
+                                                        :item-sort/descending})
+                   (ds/opt :feed/item-filter) (ds/maybe (s/spec #{:item-filter/finished}))}}))
 
 (s/def ::feed feed-data-spec)
 

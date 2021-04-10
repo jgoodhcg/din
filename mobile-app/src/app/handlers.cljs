@@ -215,6 +215,12 @@
                    :feed/item-sort] item-sort)))
 (reg-event-db :event/set-feed-item-sort set-feed-item-sort)
 
+(defn set-feed-item-filter [db [_ {feed-id     :feed/id
+                                   item-filter :feed/item-filter}]]
+  (->> db (setval [:feeds (sp/keypath feed-id)
+                   :feed/item-filter] item-filter)))
+(reg-event-db :event/set-feed-item-filter set-feed-item-filter)
+
 (comment
   (->> @re-frame.db/app-db
        (select-one! [:feeds

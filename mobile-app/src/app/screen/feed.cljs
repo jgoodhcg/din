@@ -33,11 +33,18 @@
 (defn root [props]
   (r/as-element
     [(fn []
-       (let [{:feed/keys [title image-url items item-sort item-sort-icon]
+       (let [{:feed/keys [title
+                          image-url
+                          items
+                          item-sort item-sort-icon
+                          item-filter item-filter-icon]
               feed-id    :feed/id} (<sub [:sub/selected-feed])
              opposite-sort         (if (= :item-sort/ascending item-sort)
                                      :item-sort/descending
-                                     :item-sort/ascending)]
+                                     :item-sort/ascending)
+             opposite-filter       (if (= :item-filter/finished item-filter)
+                                     nil
+                                     :item-filter/finished)]
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}
           [:> rn/StatusBar {:visibility "hidden"}]
@@ -64,10 +71,10 @@
                                                      {:feed/id        feed-id
                                                       :feed/item-sort opposite-sort}])}]
 
-             [:> paper/IconButton {:icon "filter"}] ;; filter-outline
-             ;; `:event/filter-finished` (takes feed-id)
-             ;; `:feed-item/filter-finished` in db and included in selected
-             ]]
+             [:> paper/IconButton {:icon     item-filter-icon
+                                   :on-press #(>evt [:event/set-feed-item-filter
+                                                     {:feed/id          feed-id
+                                                      :feed/item-filter opposite-filter}])}]]]
 
            [:> rn/FlatList
             {:data          (j/lit items)
