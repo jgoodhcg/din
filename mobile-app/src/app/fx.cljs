@@ -25,6 +25,7 @@
                  (j/get :manifest)
                  (j/get :version)))
 
+;; TODO set once atom?
 (def playback-object (atom (av/Audio.Sound.)))
 
 (defn <get-feed [url]
@@ -152,7 +153,9 @@
                           {:feed-item/id feed-item-id
                            :feed/id      feed-id
                            :feed-item    {:feed-item/duration (j/get load-result :durationMillis)
-                                          :feed-item/position (j/get load-result :positionMillis)}}]))))
+                                          :feed-item/position (j/get load-result :positionMillis)}}])
+                   (>evt [:event/update-selected-item-status
+                          {:status :status/paused}]))))
             ;; set playback status update fn
             (-> @playback-object
                 (j/call :setOnPlaybackStatusUpdate
@@ -175,8 +178,6 @@
                                     ;; it seems like there could be an instance where nothing is loaded
                                     ;; and it just sits with a spinner otherwise
                                     :status/loading)]
-                            (tap> {:location "playback status update"
-                                   :status   AVPlaybackStatus})
                             (>evt [:event/update-feed-item
                                    {:feed-item/id feed-item-id
                                     :feed/id      feed-id
@@ -184,6 +185,18 @@
                                                    :feed-item/position (j/get AVPlaybackStatus :positionMillis)}}])
                             (>evt [:event/update-selected-item-status
                                    {:status status}]))))))))
+
+(reg-fx :effect/play-selected-item
+        #(go
+           (-> @playback-object
+               (j/call :playAsync)
+               <p!)))
+
+(reg-fx :effect/pause-selected-item
+        #(go
+           (-> @playback-object
+               (j/call :pauseAsync)
+               <p!)))
 
 (comment
   (go

@@ -133,20 +133,28 @@
   (->> db (select-one! [:selected :selected-feed/item-id])))
 (reg-sub :sub/selected-feed-item-id selected-feed-item-id)
 
+(defn selected-feed-item-status [db _]
+  (->> db (select-one! [:selected :selected-feed/item-status])))
+(reg-sub :sub/selected-feed-item-status selected-feed-item-status)
+
 (defn selected-feed-item [[feeds-indexed
                            selected-feed-id
-                           selected-feed-item-id] _]
+                           selected-feed-item-id
+                           selected-feed-item-status] _]
   (->> feeds-indexed
        (select-one! [(sp/keypath selected-feed-id)
                      (sp/collect-one (sp/submap [:feed/title :feed/id]))
                      :feed/items
                      (sp/keypath selected-feed-item-id)])
        (transform [sp/LAST]
-                  add-progress-bar-to-item)))
+                  add-progress-bar-to-item)
+       (transform [sp/LAST]
+                  #(merge % {:feed-item/playback-status selected-feed-item-status}))))
 (reg-sub :sub/selected-feed-item
          :<- [:sub/feeds-indexed]
          :<- [:sub/selected-feed-id]
          :<- [:sub/selected-feed-item-id]
+         :<- [:sub/selected-feed-item-status]
          selected-feed-item)
 
 (comment

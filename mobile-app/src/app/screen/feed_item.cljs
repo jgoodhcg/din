@@ -58,13 +58,13 @@
                                 progress-width
                                 started
                                 duration-str
-                                position-str]}] (<sub [:sub/selected-feed-item])
+                                position-str
+                                playback-status]}] (<sub [:sub/selected-feed-item])
 
              ;; TODO
              notes         []
              selected-note nil
-             playing       :stopped ;; playback state
-             playback      nil      ;; the sound object (can we get playback state from this?)
+             playback      nil ;; the sound object (can we get playback state from this?)
              ]
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}
@@ -93,16 +93,17 @@
                                    :on-press #() ;;on-backward-30
                                    }]
 
-             (case playing
-               :stopped [:> paper/IconButton {:icon     "play" :size 42
-                                              :on-press (if (some? playback)
-                                                          #(>evt [:on-play])  ;; TODO
-                                                          #(>evt [:on-initial-play]) ;; TODO
-                                                          )}]
-               :playing [:> paper/IconButton {:icon     "pause"             :size 42
-                                              :on-press #(>evt [:on-pause]) ;; TODO
-                                              }]
-               :loading [:> paper/ActivityIndicator {:animating true :size 42}])
+             (case playback-status
+               (:status/stopped :status/paused) [:> paper/IconButton
+                                                 {:icon     "play" :size 42
+                                                  :on-press #(>evt [:event/play-selected-item])}]
+
+               :status/playing [:> paper/IconButton
+                                {:icon     "pause" :size 42
+                                 :on-press #(>evt [:event/pause-selected-item])}]
+
+               ;; :status/loading
+               [:> paper/ActivityIndicator {:animating true :size 42}])
 
              [:> paper/IconButton {:icon     "fast-forward-30"
                                    :on-press #(>evt [:on-forward-30])

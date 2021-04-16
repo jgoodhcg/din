@@ -168,9 +168,6 @@
                                feed-id      :feed/id
                                feed-item    :feed-item
                                :as          params}]]
-
-  (tap> {:location :event/update-feed-item
-         :params   params})
   (->> db (transform [:feeds
                       (sp/keypath feed-id)
                       :feed/items
@@ -195,8 +192,6 @@
 (reg-event-db :event/update-all-feed-items [base-interceptors] update-all-feed-items)
 
 (defn update-selected-item-status [db [_ {status :status}]]
-  (tap> {:location :event/update-selected-item-status
-         :status   status})
   (->> db (setval [:selected :selected-feed/item-status] status)))
 (reg-event-db :event/update-selected-item-status [base-interceptors] update-selected-item-status)
 
@@ -220,6 +215,14 @@
   (->> db (setval [:feeds (sp/keypath feed-id)
                    :feed/item-filter] item-filter)))
 (reg-event-db :event/set-feed-item-filter set-feed-item-filter)
+
+(defn play-selected-item [cofx [_ _]]
+  (merge cofx {:effect/play-selected-item true}))
+(reg-event-fx :event/play-selected-item play-selected-item)
+
+(defn pause-selected-item [cofx [_ _]]
+  (merge cofx {:effect/pause-selected-item true}))
+(reg-event-fx :event/pause-selected-item pause-selected-item)
 
 (comment
   (->> @re-frame.db/app-db
