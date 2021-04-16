@@ -47,6 +47,19 @@
   (->> db (select-one! [:selected :selected-feed/id])))
 (reg-sub :sub/selected-feed-id selected-feed-id)
 
+(defn add-progress-bar-to-item
+  [{:feed-item/keys [position duration]
+    :as             item}]
+  (let [progress-width (percent-of-duration
+                         position
+                         duration)]
+    (-> item
+        (merge
+          #:feed-item {:progress-width progress-width
+                       :started        (-> position (> 0))
+                       :duration-str   (millis->str duration)
+                       :position-str   (millis->str position)}))))
+
 (defn selected-feed [[feeds-indexed selected-feed-id] _]
   (->> feeds-indexed
        (select-one! [(sp/keypath selected-feed-id)])
@@ -64,17 +77,7 @@
                                  "filter-outline")})))
        ;; Adds progress bar items
        (transform [:feed/items sp/MAP-VALS]
-                  (fn [{:feed-item/keys [position duration]
-                       :as             item}]
-                    (let [progress-width (percent-of-duration
-                                           position
-                                           duration)]
-                      (-> item
-                          (merge
-                            #:feed-item {:progress-width progress-width
-                                         :started        (-> position (> 0))
-                                         :duration-str   (millis->str duration)
-                                         :position-str   (millis->str position)})))))
+                  add-progress-bar-to-item)
 
        ;; Adds note positioning info
        (transform [:feed/items sp/MAP-VALS
@@ -135,9 +138,11 @@
                            selected-feed-item-id] _]
   (->> feeds-indexed
        (select-one! [(sp/keypath selected-feed-id)
-                     (sp/collect-one (sp/submap [:feed/title]))
+                     (sp/collect-one (sp/submap [:feed/title :feed/id]))
                      :feed/items
-                     (sp/keypath selected-feed-item-id)])))
+                     (sp/keypath selected-feed-item-id)])
+       (transform [sp/LAST]
+                  add-progress-bar-to-item)))
 (reg-sub :sub/selected-feed-item
          :<- [:sub/feeds-indexed]
          :<- [:sub/selected-feed-id]

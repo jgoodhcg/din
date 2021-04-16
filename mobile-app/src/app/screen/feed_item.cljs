@@ -53,16 +53,18 @@
   (r/as-element
     [(fn []
        (let [[{feed-title :feed/title}
-              {:feed-item/keys [title image-url]}] (<sub [:sub/selected-feed-item])
+              {:feed-item/keys [title
+                                image-url
+                                progress-width
+                                started
+                                duration-str
+                                position-str]}] (<sub [:sub/selected-feed-item])
 
              ;; TODO
-             progress-width "0%"
-             duration-str   "00:00"
-             position-str   "00:00"
-             notes          []
-             selected-note  nil
-             playing        :stopped ;; playback state
-             playback       nil      ;; the sound object (can we get playback state from this?)
+             notes         []
+             selected-note nil
+             playing       :stopped ;; playback state
+             playback      nil      ;; the sound object (can we get playback state from this?)
              ]
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}

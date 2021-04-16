@@ -149,10 +149,10 @@
                 ;; set duration and position for new item
                 ((fn [load-result]
                    (>evt [:event/update-feed-item
-                          {:feed-item/id       feed-item-id
-                           :feed/id            feed-id
-                           :feed-item/duration (j/get load-result :durationMillis)
-                           :feed-item/position (j/get load-result :positionMillis)}]))))
+                          {:feed-item/id feed-item-id
+                           :feed/id      feed-id
+                           :feed-item    {:feed-item/duration (j/get load-result :durationMillis)
+                                          :feed-item/position (j/get load-result :positionMillis)}}]))))
             ;; set playback status update fn
             (-> @playback-object
                 (j/call :setOnPlaybackStatusUpdate
@@ -178,10 +178,10 @@
                             (tap> {:location "playback status update"
                                    :status   AVPlaybackStatus})
                             (>evt [:event/update-feed-item
-                                   {:feed-item/id       feed-item-id
-                                    :feed/id            feed-id
-                                    :feed-item/duration (j/get AVPlaybackStatus :durationMillis)
-                                    :feed-item/position (j/get AVPlaybackStatus :positionMillis)}])
+                                   {:feed-item/id feed-item-id
+                                    :feed/id      feed-id
+                                    :feed-item    {:feed-item/duration (j/get AVPlaybackStatus :durationMillis)
+                                                   :feed-item/position (j/get AVPlaybackStatus :positionMillis)}}])
                             (>evt [:event/update-selected-item-status
                                    {:status status}]))))))))
 
@@ -189,8 +189,8 @@
   (go
     (-> @playback-object
         ;; (j/call :getStatusAsync)
-        ;; (j/call :pauseAsync)
         (j/call :pauseAsync)
+        ;; (j/call :playAsync)
         <p!
         tap>))
   )
