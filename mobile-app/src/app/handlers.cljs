@@ -117,9 +117,24 @@
 
 (defn load-app-db [_ [_ {:keys [app-db version]}]]
   (println "load app db handler ----------------------------")
-  {:db         (merge default-app-db app-db) ;; merge default to handle accretion changes without blowing up spec check
-   :dispatch-n [[:event/set-version version]
-                [:event/refresh-feeds]]})
+  (let [{:selected-feed/keys [id item-id]}
+        (->> app-db (select-one! [:selected (sp/submap [:selected-feed/id
+                                                        :selected-feed/item-id])]))]
+
+    (merge {:db         (merge default-app-db app-db) ;; merge default to handle accretion changes without blowing up spec check
+            :dispatch-n [[:event/set-version version]
+                         [:event/refresh-feeds]]}
+           (when (and (some? id)
+                      (some? item-id))
+             {:effect/load-playback-object
+              (->> app-db (select-one! [:feeds
+                                        (sp/keypath id)
+                                        :feed/items
+                                        (sp/keypath item-id)
+                                        (sp/submap [:feed-item/url
+                                                    :feed-item/playback-position])])
+                   (merge {:feed/id      id
+                           :feed-item/id item-id}))}))))
 (reg-event-fx :event/load-app-db [spec-validation] load-app-db)
 
 (defn select-feed [cofx [_ {:keys [feed-id navigate]}]]

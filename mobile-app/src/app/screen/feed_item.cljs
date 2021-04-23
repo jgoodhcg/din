@@ -3,17 +3,13 @@
    ["react-native" :as rn]
    ["react-native-paper" :as paper]
    ["react-native-gesture-handler" :as g]
-
-   ["expo-file-system" :as fs]
-   [cljs.core.async :refer [go <!]]
-   [cljs.core.async.interop :refer [<p!]]
-   [clojure.edn :as edn]
+   ["react-native-controlled-mentions" :as cm]
 
    [applied-science.js-interop :as j]
    [reagent.core :as r]
    [potpuri.core :as p]
 
-   [app.helpers :refer [<sub >evt tw]]))
+   [app.helpers :refer [<sub >evt >evt-sync tw]]))
 
 (defn progress-bar [{:keys [progress-width duration-str position-str notes selected-note]}]
   [:> rn/View {:style (tw "mt-2 px-2 h-80")}
@@ -49,6 +45,45 @@
                              :on-press #(>evt [:on-share])
                              :size     24}]])]])
 
+(defn page-suggestions [e]
+  (let [pages       [] ;; TODO sub to pages
+        on-suggest  (-> e (j/get :onSuggestionPress))
+        maybe-page  (-> e (j/get :keyword))
+        suggestions (when (-> maybe-page count (> 0))
+                      (->> pages
+                           (filter #(re-find (re-pattern (str "(?i)" maybe-page)) %))))]
+    (when (some? maybe-page)
+      (r/as-element
+        [(fn []
+           [:> rn/View
+            (for [title suggestions]
+              [:> paper/List.Item
+               {:key      (str (random-uuid))
+                :title    title
+                :on-press #(on-suggest #js {:id (str (random-uuid)) :name title})}])])]))))
+
+(defn my-text-input []
+  (let [{:keys [selected-index selected-note]}
+        {:selected-note {:text "test note"}} ;; TODO sub to notes
+        ]
+    [:> cm/MentionInput
+     {:style                  (tw "text-gray-50")
+      :text-align             "left"
+      :text-align-vertical    "top"
+      :multi-line             true
+      :number-of-lines        10
+      :placeholder            "Make note here"
+      :placeholder-text-color (:color (tw "text-gray-500"))
+      :value                  (:text selected-note)
+      :on-change              #() ;; (swap! notes-atom assoc-in [:notes selected-index :text] %)
+
+      :part-types
+      [{:trigger                   "#"
+        :getPlainString            #(-> % (j/get :name) ((fn [s] (str "[[" s "]]"))))
+        :isInsertSpaceAfterMention true
+        :textStyle                 (tw "text-blue-400")
+        :renderSuggestions         page-suggestions}]}]))
+
 (defn root [props]
   (r/as-element
     [(fn []
@@ -56,16 +91,14 @@
               {:feed-item/keys [title
                                 image-url
                                 progress-width
-                                started
+                                ;; started ;; what is this for again?
                                 duration-str
                                 position-str
                                 playback-status]}] (<sub [:sub/selected-feed-item])
 
              ;; TODO
              notes         []
-             selected-note nil
-             playback      nil ;; the sound object (can we get playback state from this?)
-             ]
+             selected-note {:left "10%"}]
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}
           [:> rn/StatusBar {:visibility "hidden"}]
@@ -83,6 +116,25 @@
 
             [progress-bar (p/map-of progress-width duration-str position-str notes selected-note)]
 
+            ;; notes
+            (for [{:keys [left]} notes]
+              [:> rn/View {:key   (random-uuid)
+                           :style (merge {:left left} (tw "absolute w-1 h-4 bg-gray-200 "))}])
+
+            ;; selected note
+            (when-some [{:keys [left]} selected-note]
+              [:> rn/View {:style (merge {:left left} (tw "absolute -top-1 w-1 h-12 bg-yellow-400 rounded-t"))}])
+
+            (when (some? selected-note)
+              [:> rn/View {:style (tw "absolute left-0 top-11 w-full h-64 bg-gray-700 border-4 border-yellow-400 rounded")}
+               [:> rn/View {:style (tw "p-4")}
+                [my-text-input]]])
+
+            (when (some? selected-note)
+              [:> rn/View {:style (tw "absolute right-2 bottom-6")}
+               [:> paper/IconButton {:icon "share" :on-press #() ;; TODO move on-share from rss-play to fx
+                                     :size 24}]])
+
             ;; controlls
             [:> rn/View {:style (tw "flex flex-row justify-between items-center px-4 h-32")}
              [:> paper/IconButton {:icon     "arrow-left"
@@ -96,11 +148,11 @@
              (case playback-status
                (:status/stopped :status/paused) [:> paper/IconButton
                                                  {:icon     "play" :size 42
-                                                  :on-press #(>evt [:event/play-selected-item])}]
+                                                  :on-press #(>evt-sync [:event/play-selected-item])}]
 
                :status/playing [:> paper/IconButton
                                 {:icon     "pause" :size 42
-                                 :on-press #(>evt [:event/pause-selected-item])}]
+                                 :on-press #(>evt-sync [:event/pause-selected-item])}]
 
                ;; :status/loading
                [:> paper/ActivityIndicator {:animating true :size 42}])

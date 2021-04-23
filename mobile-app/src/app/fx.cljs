@@ -132,9 +132,11 @@
 (reg-fx :effect/navigate navigate)
 
 (reg-fx :effect/load-playback-object
-        (fn [{:feed-item/keys [url playback-position]
-             feed-item-id    :feed-item/id
-             feed-id         :feed/id}]
+        (fn [{url               :feed-item/url
+             playback-position :feed-item/playback-position
+             :or               {playback-position 0}
+             feed-item-id      :feed-item/id
+             feed-id           :feed/id}]
           (tap> {:location :effect/load-playback-object :url url})
           (go
             ;; unload the old selected item
@@ -181,8 +183,8 @@
                             (>evt [:event/update-feed-item
                                    {:feed-item/id feed-item-id
                                     :feed/id      feed-id
-                                    :feed-item    {:feed-item/duration (j/get AVPlaybackStatus :durationMillis)
-                                                   :feed-item/position (j/get AVPlaybackStatus :positionMillis)}}])
+                                    :feed-item    {:feed-item/duration (or (j/get AVPlaybackStatus :durationMillis) 0)
+                                                   :feed-item/position (or (j/get AVPlaybackStatus :positionMillis) 0)}}])
                             (>evt [:event/update-selected-item-status
                                    {:status status}]))))))))
 

@@ -78,10 +78,11 @@
               {:feed/url "https://feeds.transistor.fm/indie-bites"
                :feed/id  #uuid "b349bcac-c4c0-41ed-b15a-5da40e81e30b"}
 
-              ;; newsletter crew
-              #uuid "79c90f1c-cbf6-435c-9eba-4066bef19fd0"
-              {:feed/url "https://newslettercrew.com/rss/"
-               :feed/id  #uuid "79c90f1c-cbf6-435c-9eba-4066bef19fd0"}
+              ;; This feed is problematic
+              ;; ;; newsletter crew
+              ;; #uuid "79c90f1c-cbf6-435c-9eba-4066bef19fd0"
+              ;; {:feed/url "https://newslettercrew.com/rss/"
+              ;;  :feed/id  #uuid "79c90f1c-cbf6-435c-9eba-4066bef19fd0"}
 
               ;; run with it
               #uuid "4f9323dd-f309-49b1-99d9-2b88cc95e1ed"
