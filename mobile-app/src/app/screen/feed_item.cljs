@@ -72,13 +72,13 @@
       [:> rn/View {:style (merge {:left left} (tw "absolute -top-1 w-1 h-12 bg-yellow-400 rounded-t"))}])
 
     (when (some? selected-note)
-      [:> rn/View {:style (tw "absolute left-0 top-11 w-full h-64 bg-gray-700 border-4 border-yellow-400 rounded")}
+      [:> rn/View {:style (tw "absolute left-0 top-11 w-full h-60 bg-gray-700 border-4 border-yellow-400 rounded")}
        [:> rn/View {:style (tw "p-4")}
         [my-text-input]
         ]])
 
     (when (some? selected-note)
-      [:> rn/View {:style (tw "absolute right-2 bottom-6")}
+      [:> rn/View {:style (tw "absolute right-2 bottom-8")}
        [:> rn/View {:style (tw "flex flex-row")}
         [:> paper/IconButton {:icon     "arrow-left"
                               :on-press #()}]

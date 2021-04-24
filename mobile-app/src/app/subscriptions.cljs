@@ -137,10 +137,15 @@
   (->> db (select-one! [:selected :selected-feed/item-status])))
 (reg-sub :sub/selected-feed-item-status selected-feed-item-status)
 
+(defn selected-feed-item-selected-note-id [db _]
+  (->> db (select-one! [:selected :selected-feed/item-selected-note-id])))
+(reg-sub :sub/selected-feed-item-selected-note-id selected-feed-item-selected-note-id)
+
 (defn selected-feed-item [[feeds-indexed
                            selected-feed-id
                            selected-feed-item-id
-                           selected-feed-item-status] _]
+                           selected-feed-item-status
+                           selected-note-id] _]
   (->> feeds-indexed
        (select-one! [(sp/keypath selected-feed-id)
                      (sp/collect-one (sp/submap [:feed/title :feed/id]))
@@ -149,12 +154,16 @@
        (transform [sp/LAST]
                   add-progress-bar-to-item)
        (transform [sp/LAST]
-                  #(merge % {:feed-item/playback-status selected-feed-item-status}))))
+                  #(merge % {:feed-item/playback-status selected-feed-item-status}))
+       (transform [sp/LAST]
+                  #(merge % {:feed-item/selected-note
+                             (-> % :feed-item/notes (get selected-note-id))}))))
 (reg-sub :sub/selected-feed-item
          :<- [:sub/feeds-indexed]
          :<- [:sub/selected-feed-id]
          :<- [:sub/selected-feed-item-id]
          :<- [:sub/selected-feed-item-status]
+         :<- [:sub/selected-feed-item-selected-note-id]
          selected-feed-item)
 
 (comment
@@ -182,5 +191,5 @@
                    (sp/collect (sp/submap [:feed-item/duration]))
                    :feed-item/notes sp/MAP-VALS]
                   (fn [a b] (tap> {:a a
-                                  :b b}))))
+                                   :b b}))))
   )

@@ -121,7 +121,7 @@
         (->> app-db (select-one! [:selected (sp/submap [:selected-feed/id
                                                         :selected-feed/item-id])]))]
 
-    (merge {:db         (merge default-app-db app-db) ;; merge default to handle accretion changes without blowing up spec check
+    (merge {:db         (p/deep-merge default-app-db app-db) ;; merge default to handle accretion changes without blowing up spec check
             :dispatch-n [[:event/set-version version]
                          [:event/refresh-feeds]]}
            (when (and (some? id)
@@ -238,6 +238,22 @@
 (defn pause-selected-item [cofx [_ _]]
   (merge cofx {:effect/pause-selected-item true}))
 (reg-event-fx :event/pause-selected-item pause-selected-item)
+
+(defn add-note [{:keys [new-uuid db]} [_ {feed-id  :feed/id
+                                          item-id  :feed-item/id
+                                          text     :feed-item-note/text
+                                          position :feed-item-note/postion}]]
+  {:db (->> db (setval [:feeds (sp/keypath feed-id)
+                        :feed/items (sp/keypath item-id)
+                        :feed-item/notes (sp/keypath new-uuid)]
+
+                       {:feed-item-note/id       new-uuid
+                        :feed-item-note/position position
+                        :feed-item-note/text     text}))
+   :dispatch [:event/select-note {:feed/id           feed-id
+                                  :feed-item/id      item-id
+                                  :feed-item-note/id new-uuid}]})
+(reg-event-fx :event/add-note [base-interceptors id-gen] add-note)
 
 (comment
   (->> @re-frame.db/app-db
