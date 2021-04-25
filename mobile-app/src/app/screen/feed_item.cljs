@@ -28,27 +28,24 @@
                 :title    title
                 :on-press #(on-suggest #js {:id (str (random-uuid)) :name title})}])])]))))
 
-(defn my-text-input []
-  (let [{:keys [selected-index selected-note]}
-        {:selected-note {:text "test note"}} ;; TODO sub to notes
-        ]
-    [:> cm/MentionInput
-     {:style                  (tw "text-gray-50")
-      :text-align             "left"
-      :text-align-vertical    "top"
-      :multi-line             true
-      :number-of-lines        10
-      :placeholder            "Make note here"
-      :placeholder-text-color (:color (tw "text-gray-500"))
-      :value                  (:text selected-note)
-      :on-change              #() ;; (swap! notes-atom assoc-in [:notes selected-index :text] %)
+(defn my-text-input [selected-note]
+  [:> cm/MentionInput
+   {:style                  (tw "text-gray-50")
+    :text-align             "left"
+    :text-align-vertical    "top"
+    :multi-line             true
+    :number-of-lines        10
+    :placeholder            "Make note here"
+    :placeholder-text-color (:color (tw "text-gray-500"))
+    :value                  (:text selected-note)
+    :on-change              #() ;; (swap! notes-atom assoc-in [:notes selected-index :text] %)
 
-      :part-types
-      [{:trigger                   "#"
-        :getPlainString            #(-> % (j/get :name) ((fn [s] (str "[[" s "]]"))))
-        :isInsertSpaceAfterMention true
-        :textStyle                 (tw "text-blue-400")
-        :renderSuggestions         page-suggestions}]}]))
+    :part-types
+    [{:trigger                   "#"
+      :getPlainString            #(-> % (j/get :name) ((fn [s] (str "[[" s "]]"))))
+      :isInsertSpaceAfterMention true
+      :textStyle                 (tw "text-blue-400")
+      :renderSuggestions         page-suggestions}]}])
 
 (defn progress-bar [{:keys [progress-width duration-str position-str notes selected-note]}]
   [:> rn/View {:style (tw "mt-2 px-2 h-80")}
@@ -63,19 +60,18 @@
      [:> paper/Text {:style (tw "text-gray-400")} position-str]]
 
     ;; notes
-    (for [{:keys [left]} notes]
+    (for [{left :feed-item-note/left} notes]
       [:> rn/View {:key   (random-uuid)
                    :style (merge {:left left} (tw "absolute w-1 h-4 bg-gray-200"))}])
 
     ;; selected note
-    (when-some [{:keys [left]} selected-note]
+    (when-some [{left :feed-item-note/left} selected-note]
       [:> rn/View {:style (merge {:left left} (tw "absolute -top-1 w-1 h-12 bg-yellow-400 rounded-t"))}])
 
     (when (some? selected-note)
       [:> rn/View {:style (tw "absolute left-0 top-11 w-full h-60 bg-gray-700 border-4 border-yellow-400 rounded")}
        [:> rn/View {:style (tw "p-4")}
-        [my-text-input]
-        ]])
+        [my-text-input]]])
 
     (when (some? selected-note)
       [:> rn/View {:style (tw "absolute right-2 bottom-8")}
@@ -98,11 +94,9 @@
                                 ;; started ;; what is this for again?
                                 duration-str
                                 position-str
-                                playback-status]}] (<sub [:sub/selected-feed-item])
-
-             ;; TODO
-             notes         []
-             selected-note {:left "10%"}]
+                                playback-status
+                                notes
+                                selected-note]}] (<sub [:sub/selected-feed-item])]
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}
           [:> rn/StatusBar {:visibility "hidden"}]

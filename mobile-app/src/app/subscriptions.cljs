@@ -155,9 +155,21 @@
                   add-progress-bar-to-item)
        (transform [sp/LAST]
                   #(merge % {:feed-item/playback-status selected-feed-item-status}))
+       ;; add left percentage to all notes
+       (transform [sp/LAST (sp/collect (sp/submap [:feed-item/duration]))
+                   :feed-item/notes sp/ALL]
+                  (fn [[{duration :feed-item/duration}
+                       {position :feed-item-note/position
+                        :as      note}]]
+                    (merge note (percent-of-duration position duration))))
+       ;; add selected (relies on above :left being in place)
        (transform [sp/LAST]
-                  #(merge % {:feed-item/selected-note
-                             (-> % :feed-item/notes (get selected-note-id))}))))
+                  (fn [item]
+                    (let [selected-note
+                          (-> item
+                              :feed-item/notes
+                              (get selected-note-id))]
+                      (merge item {:feed-item/selected-note selected-note}))))))
 (reg-sub :sub/selected-feed-item
          :<- [:sub/feeds-indexed]
          :<- [:sub/selected-feed-id]
