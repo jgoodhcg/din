@@ -132,11 +132,11 @@
 (reg-fx :effect/navigate navigate)
 
 (reg-fx :effect/load-playback-object
-        (fn [{url               :feed-item/url
-             playback-position :feed-item/playback-position
-             :or               {playback-position 0}
-             feed-item-id      :feed-item/id
-             feed-id           :feed/id}]
+        (fn [{url          :feed-item/url
+             position     :feed-item/position
+             :or          {position 0}
+             feed-item-id :feed-item/id
+             feed-id      :feed/id}]
           (tap> {:location :effect/load-playback-object :url url})
           (go
             ;; unload the old selected item
@@ -147,7 +147,7 @@
             (-> @playback-object
                 (j/call :loadAsync
                         (j/lit {:uri url})
-                        (j/lit {:positionMillis playback-position}))
+                        (j/lit {:positionMillis position}))
                 <p!
                 ;; set duration and position for new item
                 ((fn [load-result]

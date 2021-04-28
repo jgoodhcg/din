@@ -132,7 +132,7 @@
                                         :feed/items
                                         (sp/keypath item-id)
                                         (sp/submap [:feed-item/url
-                                                    :feed-item/playback-position])])
+                                                    :feed-item/position])])
                    (merge {:feed/id      id
                            :feed-item/id item-id}))}))))
 (reg-event-fx :event/load-app-db [spec-validation] load-app-db)
@@ -175,7 +175,7 @@
                              :feed/items
                              (sp/keypath feed-item-id)
                              (sp/submap [:feed-item/url
-                                         :feed-item/playback-position])])
+                                         :feed-item/position])])
                (merge (select-keys params [:feed-item/id :feed/id])))}))
 (reg-event-fx :event/select-feed-item [base-interceptors] select-feed-item)
 
@@ -239,10 +239,14 @@
   (merge cofx {:effect/pause-selected-item true}))
 (reg-event-fx :event/pause-selected-item pause-selected-item)
 
+;; TODO use this
 (defn add-note [{:keys [new-uuid db]} [_ {feed-id  :feed/id
                                           item-id  :feed-item/id
                                           text     :feed-item-note/text
-                                          position :feed-item-note/postion}]]
+                                          position :feed-item-note/position
+                                          :as      args}]]
+  (tap> {:location :event/add-note
+         :args     args})
   {:db (->> db (setval [:feeds (sp/keypath feed-id)
                         :feed/items (sp/keypath item-id)
                         :feed-item/notes (sp/keypath new-uuid)]

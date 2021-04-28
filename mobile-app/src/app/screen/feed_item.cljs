@@ -60,8 +60,10 @@
      [:> paper/Text {:style (tw "text-gray-400")} position-str]]
 
     ;; notes
-    (for [{left :feed-item-note/left} notes]
-      [:> rn/View {:key   (random-uuid)
+    (for [{left :feed-item-note/left
+           id   :feed-item-note/id
+           :as  note} notes]
+      [:> rn/View {:key   id
                    :style (merge {:left left} (tw "absolute w-1 h-4 bg-gray-200"))}])
 
     ;; selected note
@@ -87,8 +89,10 @@
 (defn root [props]
   (r/as-element
     [(fn []
-       (let [[{feed-title :feed/title}
+       (let [[{feed-title :feed/title
+               feed-id    :feed/id}
               {:feed-item/keys [title
+                                id
                                 image-url
                                 progress-width
                                 ;; started ;; what is this for again?
@@ -96,6 +100,7 @@
                                 position-str
                                 playback-status
                                 notes
+                                position
                                 selected-note]}] (<sub [:sub/selected-feed-item])]
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}
@@ -143,8 +148,11 @@
             ;; add note
             [:> rn/View {:style (tw "flex flex-row justify-end mt-4 p-2")}
              [:> paper/Button {:mode     "contained" :icon "note"
-                               :on-press #(>evt [:on-add-note])
-                               } "Add note"]]
+                               :on-press #(>evt [:event/add-note {:feed/id                 feed-id
+                                                                  :feed-item/id            id
+                                                                  :feed-item-note/position position
+                                                                  :feed-item-note/text     ""}])}
+              "Add note"]]
 
 
             ]

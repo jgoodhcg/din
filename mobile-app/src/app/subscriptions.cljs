@@ -96,7 +96,7 @@
        ;; "un-indexes" notes
        (transform [:feed/items sp/MAP-VALS
                    :feed-item/notes]
-                  #(->> % vals))
+                  #(->> % vals vec))
 
        ;; "un-indexes", sorts, and filters feed items
        (transform
@@ -157,19 +157,22 @@
                   #(merge % {:feed-item/playback-status selected-feed-item-status}))
        ;; add left percentage to all notes
        (transform [sp/LAST (sp/collect (sp/submap [:feed-item/duration]))
-                   :feed-item/notes sp/ALL]
-                  (fn [[{duration :feed-item/duration}
-                       {position :feed-item-note/position
-                        :as      note}]]
-                    (merge note (percent-of-duration position duration))))
-       ;; add selected (relies on above :left being in place)
+                   :feed-item/notes sp/MAP-VALS]
+                  ;; TODO justin 2021-04-28 consolidate with selected-feed sub
+                  (fn [[{duration :feed-item/duration}]
+                      {position :feed-item-note/position
+                       :as      note}]
+                    (merge note {:feed-item-note/left (percent-of-duration position duration)})))
+       ;; ;; add selected (relies on above :left being in place)
        (transform [sp/LAST]
                   (fn [item]
                     (let [selected-note
                           (-> item
                               :feed-item/notes
                               (get selected-note-id))]
-                      (merge item {:feed-item/selected-note selected-note}))))))
+                      (merge item {:feed-item/selected-note selected-note}))))
+       ;; un-index notes
+       (transform [sp/LAST :feed-item/notes] (fn [notes-indexed] (->> notes-indexed vals vec)))))
 (reg-sub :sub/selected-feed-item
          :<- [:sub/feeds-indexed]
          :<- [:sub/selected-feed-id]
