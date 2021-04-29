@@ -239,14 +239,11 @@
   (merge cofx {:effect/pause-selected-item true}))
 (reg-event-fx :event/pause-selected-item pause-selected-item)
 
-;; TODO use this
 (defn add-note [{:keys [new-uuid db]} [_ {feed-id  :feed/id
                                           item-id  :feed-item/id
                                           text     :feed-item-note/text
                                           position :feed-item-note/position
                                           :as      args}]]
-  (tap> {:location :event/add-note
-         :args     args})
   {:db (->> db (setval [:feeds (sp/keypath feed-id)
                         :feed/items (sp/keypath item-id)
                         :feed-item/notes (sp/keypath new-uuid)]
@@ -259,6 +256,13 @@
                                   :feed-item-note/id new-uuid}]})
 (reg-event-fx :event/add-note [base-interceptors id-gen] add-note)
 
+(defn select-note [db [_ {feed-id :feed/id
+                          item-id :feed-item/id
+                          note-id :feed-item-note/id}]]
+  (->> db (transform [:selected] #(merge % {:selected-feed/id                    feed-id
+                                            :selected-feed/item-id               item-id
+                                            :selected-feed/item-selected-note-id note-id}))))
+(reg-event-db :event/select-note [base-interceptors] select-note)
 (comment
   (->> @re-frame.db/app-db
        (select-one! [:feeds

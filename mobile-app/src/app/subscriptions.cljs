@@ -163,7 +163,7 @@
                       {position :feed-item-note/position
                        :as      note}]
                     (merge note {:feed-item-note/left (percent-of-duration position duration)})))
-       ;; ;; add selected (relies on above :left being in place)
+       ;; ;; add selected note (relies on above :left being in place)
        (transform [sp/LAST]
                   (fn [item]
                     (let [selected-note
