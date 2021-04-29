@@ -140,7 +140,7 @@
                [:> paper/ActivityIndicator {:animating true :size 42}])
 
              [:> paper/IconButton {:icon     "fast-forward-30"
-                                   :on-press #(>evt [:on-forward-30])
+                                   :on-press #(>evt [:event/seek-selected-item {:seek/offset-millis 30000}])
                                    }]
              [:> paper/IconButton {:icon "fast-forward" :disabled true}]
              ]

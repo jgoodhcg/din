@@ -263,6 +263,20 @@
                                             :selected-feed/item-id               item-id
                                             :selected-feed/item-selected-note-id note-id}))))
 (reg-event-db :event/select-note [base-interceptors] select-note)
+
+(defn seek-selected-item [{:keys [db]} [_ {offset :seek/offset-millis}]]
+  (let [{feed-id :selected-feed/id
+         item-id :selected-feed/item-id}
+        (->> db (select-one! [:selected]))
+
+        position
+        (->> db (select-one! [:feeds (sp/keypath feed-id)
+                              :feed/items (sp/keypath item-id)
+                              :feed-item/position]))]
+    {:db                                db
+     :effect/set-position-selected-item (+ position offset)}))
+(reg-event-fx :event/seek-selected-item seek-selected-item)
+
 (comment
   (->> @re-frame.db/app-db
        (select-one! [:feeds

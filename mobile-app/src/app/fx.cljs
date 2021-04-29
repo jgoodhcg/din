@@ -200,6 +200,13 @@
                (j/call :pauseAsync)
                <p!)))
 
+(reg-fx :effect/set-position-selected-item
+        (fn [new-pos-millis]
+          (go
+            (-> @playback-object
+                (j/call :setPositionAsync new-pos-millis)
+                <p!))))
+
 (comment
   (go
     (-> @playback-object
