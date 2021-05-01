@@ -288,6 +288,35 @@
                      :feed-item-note/text] text))))
 (reg-event-db :event/update-selected-note-text [base-interceptors] update-selected-note-text)
 
+(defn cycle-selected-note [db [_ {direction :cycle/direction}]]
+  (let [{feed-id :selected-feed/id
+         item-id :selected-feed/item-id
+         note-id :selected-feed/item-selected-note-id}
+        (->> db (select-one! [:selected]))
+
+        selected-note-position
+        (->> db (select-one! [:feeds (sp/keypath feed-id)
+                              :feed/items (sp/keypath item-id)
+                              :feed-item/notes (sp/keypath note-id)
+                              :feed-item-note/position]))
+
+        [compare extract] (case direction
+                            :cycle/next [> first]
+                            :cycle/prev [< last])
+        new-note-id
+        (->> db
+             (select [:feeds (sp/keypath feed-id)
+                      :feed/items (sp/keypath item-id)
+                      :feed-item/notes sp/MAP-VALS])
+             (sort-by :feed-item-note/position)
+             (filter (fn [note] (-> note
+                                   :feed-item-note/position
+                                   (compare selected-note-position))))
+             extract
+             :feed-item-note/id)]
+    (->> db (setval [:selected :selected-feed/item-selected-note-id] new-note-id))))
+(reg-event-db :event/cycle-selected-note [base-interceptors] cycle-selected-note)
+
 (comment
   (->> @re-frame.db/app-db
        (select-one! [:feeds

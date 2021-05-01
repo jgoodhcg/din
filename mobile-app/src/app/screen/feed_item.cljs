@@ -82,9 +82,11 @@
       [:> rn/View {:style (tw "absolute right-2 bottom-8")}
        [:> rn/View {:style (tw "flex flex-row")}
         [:> paper/IconButton {:icon     "arrow-left"
-                              :on-press #()}]
+                              :on-press #(>evt [:event/cycle-selected-note
+                                                {:cycle/direction :cycle/prev}])}]
         [:> paper/IconButton {:icon     "arrow-right"
-                              :on-press #()}]
+                              :on-press #(>evt [:event/cycle-selected-note
+                                                {:cycle/direction :cycle/next}])}]
         [:> paper/IconButton {:icon     "share"
                               :on-press #()
                               :size     24}]]])]])
