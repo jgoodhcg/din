@@ -277,6 +277,17 @@
      :effect/set-position-selected-item (+ position offset)}))
 (reg-event-fx :event/seek-selected-item seek-selected-item)
 
+(defn update-selected-note-text [db [_ {text :feed-item-note/text}]]
+  (let [{feed-id :selected-feed/id
+         item-id :selected-feed/item-id
+         note-id :selected-feed/item-selected-note-id}
+        (->> db (select-one! [:selected]))]
+    (->> db (setval [:feeds (sp/keypath feed-id)
+                     :feed/items (sp/keypath item-id)
+                     :feed-item/notes (sp/keypath note-id)
+                     :feed-item-note/text] text))))
+(reg-event-db :event/update-selected-note-text [base-interceptors] update-selected-note-text)
+
 (comment
   (->> @re-frame.db/app-db
        (select-one! [:feeds

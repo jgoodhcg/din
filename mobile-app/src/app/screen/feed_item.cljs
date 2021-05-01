@@ -28,7 +28,9 @@
                 :title    title
                 :on-press #(on-suggest #js {:id (str (random-uuid)) :name title})}])])]))))
 
-(defn my-text-input [selected-note]
+(defn my-text-input [{:keys [selected-note]}]
+  (tap> {:location "my text input"
+         :note     selected-note})
   [:> cm/MentionInput
    {:style                  (tw "text-gray-50")
     :text-align             "left"
@@ -37,8 +39,9 @@
     :number-of-lines        10
     :placeholder            "Make note here"
     :placeholder-text-color (:color (tw "text-gray-500"))
-    :value                  (:text selected-note)
-    :on-change              #() ;; (swap! notes-atom assoc-in [:notes selected-index :text] %)
+    :value                  (:feed-item-note/text selected-note)
+    :on-change              #(>evt-sync [:event/update-selected-note-text
+                                         {:feed-item-note/text %}])
 
     :part-types
     [{:trigger                   "#"
@@ -73,7 +76,7 @@
     (when (some? selected-note)
       [:> rn/View {:style (tw "absolute left-0 top-11 w-full h-60 bg-gray-700 border-4 border-yellow-400 rounded")}
        [:> rn/View {:style (tw "p-4")}
-        [my-text-input]]])
+        [my-text-input (p/map-of selected-note)]]])
 
     (when (some? selected-note)
       [:> rn/View {:style (tw "absolute right-2 bottom-8")}
@@ -117,14 +120,19 @@
               [:> paper/Title feed-title]
               [:> paper/Text title]]]
 
-            [progress-bar (p/map-of progress-width duration-str position-str notes selected-note)]
+            [progress-bar (p/map-of
+                            progress-width
+                            duration-str
+                            position-str
+                            notes
+                            selected-note)]
 
             ;; controlls
             [:> rn/View {:style (tw "flex flex-row justify-between items-center px-4 h-32")}
 
-             [:> paper/IconButton {:icon "rewind" :disabled true}]
+             [:> paper/IconButton {:icon "skip-backward" :disabled true}]
              [:> paper/IconButton {:icon     "rewind-30"
-                                   :on-press #() ;;on-backward-30
+                                   :on-press #(>evt-sync [:event/seek-selected-item {:seek/offset-millis -30000}])
                                    }]
 
              (case playback-status
@@ -139,19 +147,20 @@
                ;; :status/loading
                [:> paper/ActivityIndicator {:animating true :size 42}])
 
+             [:> paper/IconButton {:icon "play-speed" :disabled true}]
              [:> paper/IconButton {:icon     "fast-forward-30"
-                                   :on-press #(>evt [:event/seek-selected-item {:seek/offset-millis 30000}])
+                                   :on-press #(>evt-sync [:event/seek-selected-item {:seek/offset-millis 30000}])
                                    }]
-             [:> paper/IconButton {:icon "fast-forward" :disabled true}]
+             [:> paper/IconButton {:icon "skip-forward" :disabled true}]
              ]
 
             ;; add note
             [:> rn/View {:style (tw "flex flex-row justify-end mt-4 p-2")}
              [:> paper/Button {:mode     "contained" :icon "note"
-                               :on-press #(>evt [:event/add-note {:feed/id                 feed-id
-                                                                  :feed-item/id            id
-                                                                  :feed-item-note/position position
-                                                                  :feed-item-note/text     ""}])}
+                               :on-press #(>evt-sync [:event/add-note {:feed/id                 feed-id
+                                                                       :feed-item/id            id
+                                                                       :feed-item-note/position position
+                                                                       :feed-item-note/text     ""}])}
               "Add note"]]
 
 
