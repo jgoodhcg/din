@@ -167,6 +167,7 @@
 
          (when navigate {:effect/navigate :screen/feed-item})
 
+         ;; TODO justin 2021-05-03 select "first" note side effect
          {:effect/load-playback-object
           (->> cofx
                (select-one! [:db
@@ -294,36 +295,49 @@
          note-id :selected-feed/item-selected-note-id}
         (->> db (select-one! [:selected]))
 
-        selected-note-position
-        (->> db (select-one! [:feeds (sp/keypath feed-id)
-                              :feed/items (sp/keypath item-id)
-                              :feed-item/notes (sp/keypath note-id)
-                              :feed-item-note/position]))
-
-        [compare extract] (case direction
-                            :cycle/next [> first]
-                            :cycle/prev [< last])
-        new-note-id
+        notes
         (->> db
              (select [:feeds (sp/keypath feed-id)
                       :feed/items (sp/keypath item-id)
                       :feed-item/notes sp/MAP-VALS])
-             (sort-by :feed-item-note/position)
-             (filter (fn [note] (-> note
-                                   :feed-item-note/position
-                                   (compare selected-note-position))))
+             (sort-by :feed-item-note/position))
+
+        old-note-index
+        (-> notes (p/find-index #(= (:feed-item-note/id %) note-id)))
+
+        extract (case direction
+                  :cycle/prev last
+                  :cycle/next second)
+
+        new-note-id
+        (->> notes
+             cycle
+             (drop old-note-index)
+             (take (count notes))
              extract
              :feed-item-note/id)]
     (->> db (setval [:selected :selected-feed/item-selected-note-id] new-note-id))))
 (reg-event-db :event/cycle-selected-note [base-interceptors] cycle-selected-note)
 
+;; (defn delete-selected-note [{:keys [db] :as cofx} _]
+;;   (let [{feed-id :selected-feed/id
+;;          item-id :selected-feed/item-id
+;;          note-id :selected-feed/item-selected-note-id}
+;;         (->> db (select-one! [:selected]))]
+
+;;     {:db (-> db
+;;              (cycle-selected-note [nil {:cycle/direction}] )
+;;              (setval []))}
+;;     )
+;;   )
+
 (comment
-  (->> @re-frame.db/app-db
-       (select-one! [:feeds
-                     sp/FIRST ;; first key val pair
-                     sp/LAST  ;; the val portion of that one pair
-                     :feed/items
-                     sp/FIRST ;; first key val pair
-                     sp/LAST  ;; the val portion of that one pair
-                     (sp/submap [:feed-item/url :feed-item/playback-position])]))
-  )
+(->> @re-frame.db/app-db
+     (select-one! [:feeds
+                   sp/FIRST ;; first key val pair
+                   sp/LAST  ;; the val portion of that one pair
+                   :feed/items
+                   sp/FIRST ;; first key val pair
+                   sp/LAST  ;; the val portion of that one pair
+                   (sp/submap [:feed-item/url :feed-item/playback-position])]))
+)
