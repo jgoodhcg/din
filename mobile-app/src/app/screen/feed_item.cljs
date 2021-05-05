@@ -12,7 +12,7 @@
    [app.helpers :refer [<sub >evt >evt-sync tw]]))
 
 (defn page-suggestions [e]
-  (let [pages       ["my page" "hello"] ;; TODO sub to pages
+  (let [pages       (->> 100 range (mapv #(str "my page " %))) ;; TODO sub to pages
         on-suggest  (-> e (j/get :onSuggestionPress))
         maybe-page  (-> e (j/get :keyword))
         suggestions (when (-> maybe-page count (> 0))
@@ -81,6 +81,9 @@
     (when (some? selected-note)
       [:> rn/View {:style (tw "absolute right-2 bottom-8")}
        [:> rn/View {:style (tw "flex flex-row")}
+        [:> paper/IconButton {:icon     "delete"
+                              :style    (tw "mr-32")
+                              :on-press #(>evt [:event/delete-selected-note])}]
         [:> paper/IconButton {:icon     "arrow-left"
                               :on-press #(>evt [:event/cycle-selected-note
                                                 {:cycle/direction :cycle/prev}])}]

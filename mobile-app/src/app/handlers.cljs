@@ -72,9 +72,9 @@
 
 (defn add-feed [{:keys [new-uuid db]} [_ feed-url]]
   {:db                  (->> db
-                            (transform [:feeds] #(assoc % new-uuid
-                                                        {:feed/id  new-uuid
-                                                         :feed/url feed-url})))
+                             (transform [:feeds] #(assoc % new-uuid
+                                                         {:feed/id  new-uuid
+                                                          :feed/url feed-url})))
    :effect/refresh-feed {:feed/id  new-uuid
                          :feed/url feed-url}})
 (reg-event-fx :event/add-feed [base-interceptors id-gen] add-feed)
@@ -163,21 +163,32 @@
                                  feed-id      :feed/id
                                  navigate     :navigate
                                  :as          params}]]
-  (merge (->> cofx (setval [:db :selected :selected-feed/item-id] feed-item-id))
 
-         (when navigate {:effect/navigate :screen/feed-item})
+  (let [new-note-id (->> cofx
+                         (select
+                           [:db :feeds (sp/keypath feed-id)
+                            :feed/items (sp/keypath feed-item-id)
+                            :feed-item/notes sp/MAP-VALS :feed-item-note/id])
+                         first)]
 
-         ;; TODO justin 2021-05-03 select "first" note side effect
-         {:effect/load-playback-object
-          (->> cofx
-               (select-one! [:db
-                             :feeds
-                             (sp/keypath feed-id)
-                             :feed/items
-                             (sp/keypath feed-item-id)
-                             (sp/submap [:feed-item/url
-                                         :feed-item/position])])
-               (merge (select-keys params [:feed-item/id :feed/id])))}))
+    (merge (->> cofx (setval [:db :selected :selected-feed/item-id] feed-item-id))
+
+           (when navigate {:effect/navigate :screen/feed-item})
+
+           (when (some? new-note-id)
+             {:dispatch [:event/select-note {:feed/id           feed-id
+                                             :feed-item/id      feed-item-id
+                                             :feed-item-note/id new-note-id}]})
+           {:effect/load-playback-object
+            (->> cofx
+                 (select-one! [:db
+                               :feeds
+                               (sp/keypath feed-id)
+                               :feed/items
+                               (sp/keypath feed-item-id)
+                               (sp/submap [:feed-item/url
+                                           :feed-item/position])])
+                 (merge (select-keys params [:feed-item/id :feed/id])))})))
 (reg-event-fx :event/select-feed-item [base-interceptors] select-feed-item)
 
 (defn update-feed-item [db [_ {feed-item-id :feed-item/id
@@ -222,6 +233,7 @@
 
 (defn set-feed-item-sort [db [_ {feed-id   :feed/id
                                  item-sort :feed/item-sort}]]
+  ;; TODO justin 2021-05-04 this needs to be set on refresh / update / and selection to keep the button in sync
   (->> db (setval [:feeds (sp/keypath feed-id)
                    :feed/item-sort] item-sort)))
 (reg-event-db :event/set-feed-item-sort set-feed-item-sort)
@@ -319,25 +331,30 @@
     (->> db (setval [:selected :selected-feed/item-selected-note-id] new-note-id))))
 (reg-event-db :event/cycle-selected-note [base-interceptors] cycle-selected-note)
 
-;; (defn delete-selected-note [{:keys [db] :as cofx} _]
-;;   (let [{feed-id :selected-feed/id
-;;          item-id :selected-feed/item-id
-;;          note-id :selected-feed/item-selected-note-id}
-;;         (->> db (select-one! [:selected]))]
+(defn delete-selected-note [db _]
+  (let [{feed-id :selected-feed/id
+         item-id :selected-feed/item-id
+         note-id :selected-feed/item-selected-note-id}
+        (->> db (select-one! [:selected]))
+        to-notes   [:feeds (sp/keypath feed-id)
+                    :feed/items (sp/keypath item-id)
+                    :feed-item/notes]
+        note-count (->> db (select (conj to-notes sp/MAP-VALS)) count)]
 
-;;     {:db (-> db
-;;              (cycle-selected-note [nil {:cycle/direction}] )
-;;              (setval []))}
-;;     )
-;;   )
+    (-> db
+        (cycle-selected-note [nil {:cycle/direction :cycle/prev}])
+        (->> (setval (conj to-notes (sp/keypath note-id)) sp/NONE))
+        (cond->> (-> note-count (<= 1))
+          (setval [:selected :selected-feed/item-selected-note-id] nil)))))
+(reg-event-db :event/delete-selected-note [base-interceptors] delete-selected-note)
 
 (comment
-(->> @re-frame.db/app-db
-     (select-one! [:feeds
-                   sp/FIRST ;; first key val pair
-                   sp/LAST  ;; the val portion of that one pair
-                   :feed/items
-                   sp/FIRST ;; first key val pair
-                   sp/LAST  ;; the val portion of that one pair
-                   (sp/submap [:feed-item/url :feed-item/playback-position])]))
-)
+  (->> @re-frame.db/app-db
+       (select-one! [:feeds
+                     sp/FIRST ;; first key val pair
+                     sp/LAST  ;; the val portion of that one pair
+                     :feed/items
+                     sp/FIRST ;; first key val pair
+                     sp/LAST  ;; the val portion of that one pair
+                     (sp/submap [:feed-item/url :feed-item/playback-position])]))
+  )
