@@ -91,7 +91,7 @@
                               :on-press #(>evt [:event/cycle-selected-note
                                                 {:cycle/direction :cycle/next}])}]
         [:> paper/IconButton {:icon     "share"
-                              :on-press #()
+                              :on-press #(>evt [:event/share-selected-note])
                               :size     24}]]])]])
 
 (defn root [props]

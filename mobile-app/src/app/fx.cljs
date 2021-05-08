@@ -5,6 +5,7 @@
    ["expo-av" :as av]
    ["expo-file-system" :as fs]
    ["expo-constants" :as expo-constants]
+   ["react-native-controlled-mentions" :as cm]
 
    [re-frame.core :refer [reg-fx]]
    [applied-science.js-interop :as j]
@@ -14,7 +15,7 @@
    [clojure.edn :as edn]
    [tick.alpha.api :as t]
 
-   [app.helpers :refer [>evt >evt-sync screen-key-name-mapping]]))
+   [app.helpers :refer [>evt >evt-sync screen-key-name-mapping millis->str]]))
 
 (def dd (-> fs (j/get :documentDirectory)))
 
@@ -206,6 +207,23 @@
             (-> @playback-object
                 (j/call :setPositionAsync new-pos-millis)
                 <p!))))
+
+(reg-fx :effect/share
+        (fn [{feed-title :feed/title
+             item-title :feed-item/title
+             position   :feed-item-note/position
+             note-text  :feed-item-note/text}]
+          (let [text         (-> note-text
+                                 (cm/replaceMentionValues
+                                   (fn [mt] (str "[[" (j/get mt :name) "]]"))))
+                position-str (-> position millis->str)]
+            (-> rn/Share
+                (j/call :share
+                        (j/lit {:message (str  feed-title " \n "
+                                               item-title " \n "
+                                               position-str " \n "
+                                               text " \n "
+                                               )}))))))
 
 (comment
   (go

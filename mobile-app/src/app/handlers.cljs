@@ -321,13 +321,23 @@
                   :cycle/prev last
                   :cycle/next second)
 
+        ;; cycle notes so that the selected is first
+        ;; going forwward (next) means taking the "second" item
+        ;; going backwards (prev) means taking the "last" item
+        ;; If ":b" is selected and we want the next item
+        ;; [ :a :b :c ] -> cycling -> [:b :c :a] -> extraction -> :c
         new-note-id
         (->> notes
+
+             ;; the cycling
              cycle
              (drop old-note-index)
              (take (count notes))
+
+             ;; extraction
              extract
              :feed-item-note/id)]
+
     (->> db (setval [:selected :selected-feed/item-selected-note-id] new-note-id))))
 (reg-event-db :event/cycle-selected-note [base-interceptors] cycle-selected-note)
 
@@ -347,6 +357,25 @@
         (cond->> (-> note-count (<= 1))
           (setval [:selected :selected-feed/item-selected-note-id] nil)))))
 (reg-event-db :event/delete-selected-note [base-interceptors] delete-selected-note)
+
+(defn share-selected-note [cofx _]
+  (let [{feed-id :selected-feed/id
+         item-id :selected-feed/item-id
+         note-id :selected-feed/item-selected-note-id}
+        (->> cofx (select-one! [:db :selected]))
+
+        params (->> cofx (select-one! [:db :feeds (sp/keypath feed-id)
+                                       (sp/collect-one (sp/submap [:feed/title]))
+                                       :feed/items (sp/keypath item-id)
+                                       (sp/collect-one (sp/submap [:feed-item/title]))
+                                       :feed-item/notes (sp/keypath note-id)
+                                       (sp/submap [:feed-item-note/position
+                                                   :feed-item-note/text])])
+                    (apply merge))]
+    (tap> {:location "share selected note handler"
+           :params   params})
+    (merge cofx {:effect/share params})))
+(reg-event-fx :event/share-selected-note [base-interceptors] share-selected-note)
 
 (comment
   (->> @re-frame.db/app-db
