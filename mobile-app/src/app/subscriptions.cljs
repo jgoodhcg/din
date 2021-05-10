@@ -181,6 +181,10 @@
          :<- [:sub/selected-feed-item-selected-note-id]
          selected-feed-item)
 
+(defn roam-pages [db _]
+  (->> db (select [:roam-pages sp/ALL])))
+(reg-sub :sub/roam-pages roam-pages)
+
 (comment
   (->> @re-frame.db/app-db
        (transform [:feeds sp/MAP-VALS :feed/items sp/MAP-VALS]

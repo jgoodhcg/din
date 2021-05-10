@@ -377,6 +377,10 @@
     (merge cofx {:effect/share params})))
 (reg-event-fx :event/share-selected-note [base-interceptors] share-selected-note)
 
+(defn reset-roam-pages [db [_ pages]]
+  (->> db (setval [:roam-pages] pages)))
+(reg-event-db :event/reset-roam-pages [base-interceptors] reset-roam-pages)
+
 (comment
   (->> @re-frame.db/app-db
        (select-one! [:feeds

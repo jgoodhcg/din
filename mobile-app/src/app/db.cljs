@@ -53,10 +53,11 @@
                    :selected   {:selected-feed/id                    (ds/maybe uuid?)
                                 :selected-feed/item-id               (ds/maybe string?)
                                 :selected-feed/item-status           (ds/maybe (s/spec #{:status/playing
-                                                                                        :status/loading
-                                                                                        :status/paused
-                                                                                        :status/stopped}))
+                                                                                         :status/loading
+                                                                                         :status/paused
+                                                                                         :status/stopped}))
                                 :selected-feed/item-selected-note-id (ds/maybe uuid?)}
+                   :roam-pages [string?]
                    :navigation {:navigation/last-screen (ds/maybe keyword?)}}
             :name ::app-db}))
 
@@ -101,4 +102,5 @@
                 :selected-feed/item-id               nil
                 :selected-feed/item-status           nil
                 :selected-feed/item-selected-note-id nil}
+   :roam-pages []
    :navigation {:navigation/last-screen nil}})

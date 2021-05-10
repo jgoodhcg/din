@@ -11,13 +11,13 @@
 
    [app.helpers :refer [<sub >evt >evt-sync tw]]))
 
-(defn page-suggestions [e]
-  (let [pages       (->> 100 range (mapv #(str "my page " %))) ;; TODO sub to pages
-        on-suggest  (-> e (j/get :onSuggestionPress))
+(defn page-suggestions [pages e]
+  (let [on-suggest  (-> e (j/get :onSuggestionPress))
         maybe-page  (-> e (j/get :keyword))
-        suggestions (when (-> maybe-page count (> 0))
+        suggestions (when (and (-> maybe-page count (> 0))
+                               (-> pages count (> 0)))
                       (->> pages
-                           (filter #(re-find (re-pattern (str "(?i)" maybe-page)) %))))]
+                           (filter #(re-find (re-pattern (str "(?i)" maybe-page)) %))))  ]
     (when (some? maybe-page)
       (r/as-element
         [(fn []
@@ -29,26 +29,25 @@
                 :on-press #(on-suggest #js {:id (str (random-uuid)) :name title})}])])]))))
 
 (defn my-text-input [{:keys [selected-note]}]
-  (tap> {:location "my text input"
-         :note     selected-note})
-  [:> cm/MentionInput
-   {:style                  (tw "text-gray-50")
-    :text-align             "left"
-    :text-align-vertical    "top"
-    :multi-line             true
-    :number-of-lines        10
-    :placeholder            "Make note here"
-    :placeholder-text-color (:color (tw "text-gray-500"))
-    :value                  (:feed-item-note/text selected-note)
-    :on-change              #(>evt-sync [:event/update-selected-note-text
-                                         {:feed-item-note/text %}])
+  (let [pages (<sub [:sub/roam-pages])]
+    [:> cm/MentionInput
+     {:style                  (tw "text-gray-50")
+      :text-align             "left"
+      :text-align-vertical    "top"
+      :multi-line             true
+      :number-of-lines        10
+      :placeholder            "Make note here"
+      :placeholder-text-color (:color (tw "text-gray-500"))
+      :value                  (:feed-item-note/text selected-note)
+      :on-change              #(>evt-sync [:event/update-selected-note-text
+                                           {:feed-item-note/text %}])
 
-    :part-types
-    [{:trigger                   "#"
-      :getPlainString            #(-> % (j/get :name) ((fn [s] (str "[[" s "]]"))))
-      :isInsertSpaceAfterMention true
-      :textStyle                 (tw "text-blue-400")
-      :renderSuggestions         page-suggestions}]}])
+      :part-types
+      [{:trigger                   "#"
+        :getPlainString            #(-> % (j/get :name) ((fn [s] (str "[[" s "]]"))))
+        :isInsertSpaceAfterMention true
+        :textStyle                 (tw "text-blue-400")
+        :renderSuggestions         (partial page-suggestions pages)}]}]))
 
 (defn progress-bar [{:keys [progress-width duration-str position-str notes selected-note]}]
   [:> rn/View {:style (tw "mt-2 px-2 h-80")}
