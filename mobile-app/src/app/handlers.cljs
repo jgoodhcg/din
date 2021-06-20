@@ -30,7 +30,7 @@
       context)))
 
 (def spec-validation
-  (if goog.DEBUG
+  (if false ;; goog.DEBUG
     (->interceptor
       :id :spec-validation
       :after validate-spec)
@@ -277,7 +277,8 @@
                                             :selected-feed/item-selected-note-id note-id}))))
 (reg-event-db :event/select-note [base-interceptors] select-note)
 
-(defn seek-selected-item [{:keys [db]} [_ {offset :seek/offset-millis}]]
+(defn seek-selected-item [{:keys [db]} [_ {offset       :seek/offset-millis
+                                           abs-position :seek/absolute-position}]]
   (let [{feed-id :selected-feed/id
          item-id :selected-feed/item-id}
         (->> db (select-one! [:selected]))
@@ -285,9 +286,12 @@
         position
         (->> db (select-one! [:feeds (sp/keypath feed-id)
                               :feed/items (sp/keypath item-id)
-                              :feed-item/position]))]
+                              :feed-item/position]))
+
+        new-position (or abs-position (+ position offset))]
+
     {:db                                db
-     :effect/set-position-selected-item (+ position offset)}))
+     :effect/set-position-selected-item new-position}))
 (reg-event-fx :event/seek-selected-item seek-selected-item)
 
 (defn update-selected-note-text [db [_ {text :feed-item-note/text}]]
@@ -380,6 +384,18 @@
 (defn reset-roam-pages [db [_ pages]]
   (->> db (setval [:roam-pages] pages)))
 (reg-event-db :event/reset-roam-pages [base-interceptors] reset-roam-pages)
+
+(defn set-playback-rate-menu-visible [db [_ visible]]
+  (->> db (setval [:menus :menu/playback-rate :playback-rate/visible] visible)))
+(reg-event-db :event/set-playback-rate-menu-visible [base-interceptors] set-playback-rate-menu-visible)
+
+(defn set-playback-rate [cofx [_ {feed-id :feed/id
+                                  rate    :feed/playback-rate}]]
+  (tap> {:location :event/set-playback-rate
+         :rate     rate})
+  (->> cofx (setval [:db :feeds (sp/keypath feed-id) :feed/playback-rate] rate)
+       (merge {:effect/set-playback-rate rate})))
+(reg-event-fx :event/set-playback-rate set-playback-rate)
 
 (comment
   (->> @re-frame.db/app-db

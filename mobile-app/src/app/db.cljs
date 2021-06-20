@@ -31,25 +31,28 @@
 
 (def feed-data-spec
   (ds/spec {:name ::feed-ds
-            :spec {:feed/id                   uuid?
-                   :feed/url                  string?
-                   (ds/opt :feed/title)       string?
-                   (ds/opt :feed/image-url)   string?
-                   (ds/opt :feed/items)       ::feed-items
-                   (ds/opt :feed/item-sort)   (s/spec #{:item-sort/ascending
-                                                        :item-sort/descending})
-                   (ds/opt :feed/item-filter) (ds/maybe (s/spec #{:item-filter/finished}))}}))
+            :spec {:feed/id                     uuid?
+                   :feed/url                    string?
+                   (ds/opt :feed/title)         string?
+                   (ds/opt :feed/image-url)     string?
+                   (ds/opt :feed/items)         ::feed-items
+                   (ds/opt :feed/item-sort)     (s/spec #{:item-sort/ascending
+                                                         :item-sort/descending})
+                   (ds/opt :feed/item-filter)   (ds/maybe (s/spec #{:item-filter/finished}))
+                   (ds/opt :feed/playback-rate) (s/spec #{0.5 0.75 1 1.5 2})}}))
 
 (s/def ::feed feed-data-spec)
 
 (s/def ::feeds (s/and map? (s/every-kv uuid? ::feed)))
 
 (def app-db-spec
-  (ds/spec {:spec {:settings   {:theme (s/spec #{:light :dark})}
-                   :version    string?
-                   :feeds      ::feeds
+  (ds/spec {:spec {:settings {:theme (s/spec #{:light :dark})}
+                   :version  string?
+                   :feeds    ::feeds
+                   ;; TODO justin 2021-05-17 Change all :*/visible to "visibility"
                    :modals     {:modal/feed-add    {:feed-add/visible boolean?}
                                 :modal/feed-remove {:feed-remove/id (ds/maybe uuid?)}}
+                   :menus      {:menu/playback-rate {:playback-rate/visible boolean?}}
                    :selected   {:selected-feed/id                    (ds/maybe uuid?)
                                 :selected-feed/item-id               (ds/maybe string?)
                                 :selected-feed/item-status           (ds/maybe (s/spec #{:status/playing
@@ -98,6 +101,7 @@
               }
    :modals     {:modal/feed-add    {:feed-add/visible false}
                 :modal/feed-remove {:feed-remove/id nil}}
+   :menus      {:menu/playback-rate {:playback-rate/visible false}}
    :selected   {:selected-feed/id                    nil
                 :selected-feed/item-id               nil
                 :selected-feed/item-status           nil

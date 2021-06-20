@@ -73,7 +73,7 @@
       [:> rn/View {:style (merge {:left left} (tw "absolute -top-1 w-1 h-12 bg-yellow-400 rounded-t"))}])
 
     (when (some? selected-note)
-      [:> rn/View {:style (tw "absolute left-0 top-11 w-full h-60 bg-gray-700 border-4 border-yellow-400 rounded")}
+      [:> rn/View {:style (tw "absolute left-0 top-11 w-full h-60 bg-gray-700 border-4 border-yellow-400")}
        [:> rn/View {:style (tw "p-4")}
         [my-text-input (p/map-of selected-note)]]])
 
@@ -93,22 +93,37 @@
                               :on-press #(>evt [:event/share-selected-note])
                               :size     24}]]])]])
 
+(defn rate-menu-item [{:keys [feed-id rate]}]
+  [:> paper/Menu.Item
+   {:title    (str rate "x")
+    :on-press #(do
+                 (tap> {:location :on-press
+                        :rate     rate})
+                 (>evt [:event/set-playback-rate {:feed/id            feed-id
+                                                  :feed/playback-rate rate}])
+                 (>evt [:event/set-playback-rate-menu-visible false]))}])
+
 (defn root [props]
   (r/as-element
     [(fn []
-       (let [[{feed-title :feed/title
-               feed-id    :feed/id}
+       (let [[{feed-title    :feed/title
+               feed-id       :feed/id
+               playback-rate :feed/playback-rate
+               :or           {playback-rate 1}}
               {:feed-item/keys [title
                                 id
                                 image-url
                                 progress-width
                                 ;; started ;; what is this for again?
                                 duration-str
+                                duration
                                 position-str
                                 playback-status
                                 notes
                                 position
-                                selected-note]}] (<sub [:sub/selected-feed-item])]
+                                selected-note]}] (<sub [:sub/selected-feed-item])
+             playback-rate-menu-visible          (<sub [:sub/playback-rate-menu-visible])]
+
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}
           [:> rn/StatusBar {:visibility "hidden"}]
@@ -124,48 +139,68 @@
               [:> paper/Title feed-title]
               [:> paper/Text title]]]
 
-            [progress-bar (p/map-of
-                            progress-width
-                            duration-str
-                            position-str
-                            notes
-                            selected-note)]
+            (when (not= playback-status :status/loading)
+              [progress-bar (p/map-of
+                              progress-width
+                              duration-str
+                              position-str
+                              notes
+                              selected-note)])
 
             ;; controlls
-            [:> rn/View {:style (tw "flex flex-row justify-between items-center px-4 h-32")}
+            (if (= playback-status :status/loading)
+              [:> paper/ActivityIndicator {:animating true :size 42}]
 
-             [:> paper/IconButton {:icon "skip-backward" :disabled true}]
-             [:> paper/IconButton {:icon     "rewind-30"
-                                   :on-press #(>evt-sync [:event/seek-selected-item {:seek/offset-millis -30000}])
-                                   }]
+              [:> rn/View {:style (tw "flex flex-row justify-between items-center px-4 h-32")}
+               [:> paper/IconButton {:icon     "skip-backward"
+                                     :on-press #(>evt-sync [:event/seek-selected-item {:seek/absolute-position 0}])}]
+               [:> paper/IconButton {:icon     "rewind-30"
+                                     :on-press #(>evt-sync [:event/seek-selected-item {:seek/offset-millis -30000}])}]
+               (case playback-status
+                 (:status/stopped :status/paused) [:> paper/IconButton
+                                                   {:icon     "play" :size 42
+                                                    :on-press #(>evt-sync [:event/play-selected-item])}]
 
-             (case playback-status
-               (:status/stopped :status/paused) [:> paper/IconButton
-                                                 {:icon     "play" :size 42
-                                                  :on-press #(>evt-sync [:event/play-selected-item])}]
+                 :status/playing [:> paper/IconButton
+                                  {:icon     "pause" :size 42
+                                   :on-press #(>evt-sync [:event/pause-selected-item])}]
+                 nil)
+               [:> paper/IconButton {:icon     "fast-forward-30"
+                                     :on-press #(>evt-sync [:event/seek-selected-item {:seek/offset-millis 30000}])}]
+               [:> paper/IconButton {:icon     "skip-forward"
+                                     :on-press #(>evt-sync [:event/seek-selected-item {:seek/absolute-position duration}])}]])
 
-               :status/playing [:> paper/IconButton
-                                {:icon     "pause" :size 42
-                                 :on-press #(>evt-sync [:event/pause-selected-item])}]
+            ;; add note and playback rate
+            (when (not= playback-status :status/loading)
+              [:> rn/View {:style (tw "flex flex-row justify-between mt-4 p-2")}
 
-               ;; :status/loading
-               [:> paper/ActivityIndicator {:animating true :size 42}])
+               ;; playback rate
+               [:> paper/Menu {:visible    playback-rate-menu-visible
+                               :on-dismiss #(>evt [:event/set-playback-rate-menu-visible false])
+                               :anchor
+                               (r/as-element
+                                 [:> paper/Button
+                                  {:mode     "text" :icon "play-speed"
+                                   :color    (-> props (j/get :theme) (j/get :colors) (j/get :text))
+                                   :on-press #(>evt [:event/set-playback-rate-menu-visible true])}
+                                  (str playback-rate "x")])}
+                [rate-menu-item {:feed-id feed-id :rate 0.50}]
+                [rate-menu-item {:feed-id feed-id :rate 0.75}]
+                [rate-menu-item {:feed-id feed-id :rate 1.00}]
+                [rate-menu-item {:feed-id feed-id :rate 1.25}]
+                [rate-menu-item {:feed-id feed-id :rate 1.50}]
+                [rate-menu-item {:feed-id feed-id :rate 1.75}]
+                [rate-menu-item {:feed-id feed-id :rate 2.00}]
+                ]
 
-             [:> paper/IconButton {:icon "play-speed" :disabled true}]
-             [:> paper/IconButton {:icon     "fast-forward-30"
-                                   :on-press #(>evt-sync [:event/seek-selected-item {:seek/offset-millis 30000}])
-                                   }]
-             [:> paper/IconButton {:icon "skip-forward" :disabled true}]
-             ]
 
-            ;; add note
-            [:> rn/View {:style (tw "flex flex-row justify-end mt-4 p-2")}
-             [:> paper/Button {:mode     "contained" :icon "note"
-                               :on-press #(>evt-sync [:event/add-note {:feed/id                 feed-id
-                                                                       :feed-item/id            id
-                                                                       :feed-item-note/position position
-                                                                       :feed-item-note/text     ""}])}
-              "Add note"]]
+               ;; add note
+               [:> paper/Button {:mode     "contained" :icon "note"
+                                 :on-press #(>evt-sync [:event/add-note {:feed/id                 feed-id
+                                                                         :feed-item/id            id
+                                                                         :feed-item-note/position position
+                                                                         :feed-item-note/text     ""}])}
+                "Add note"]])
 
 
             ]

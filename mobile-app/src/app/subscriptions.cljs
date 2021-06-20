@@ -148,7 +148,7 @@
                            selected-note-id] _]
   (->> feeds-indexed
        (select-one! [(sp/keypath selected-feed-id)
-                     (sp/collect-one (sp/submap [:feed/title :feed/id]))
+                     (sp/collect-one (sp/submap [:feed/title :feed/id :feed/playback-rate]))
                      :feed/items
                      (sp/keypath selected-feed-item-id)])
        (transform [sp/LAST]
@@ -185,7 +185,14 @@
   (->> db (select [:roam-pages sp/ALL])))
 (reg-sub :sub/roam-pages roam-pages)
 
+(defn playback-rate-menu-visible [db _]
+  (->> db (select-one! [:menus :menu/playback-rate :playback-rate/visible])))
+(reg-sub :sub/playback-rate-menu-visible playback-rate-menu-visible)
+
 (comment
+  (->> @re-frame.db/app-db
+       (select-one! [:menus :menu/playback-rate :playback-rate/visible]))
+
   (->> @re-frame.db/app-db
        (transform [:feeds sp/MAP-VALS :feed/items sp/MAP-VALS]
                   (fn [item] (merge item
@@ -210,5 +217,5 @@
                    (sp/collect (sp/submap [:feed-item/duration]))
                    :feed-item/notes sp/MAP-VALS]
                   (fn [a b] (tap> {:a a
-                                   :b b}))))
+                                  :b b}))))
   )

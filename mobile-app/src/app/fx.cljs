@@ -26,8 +26,8 @@
                  (j/get :manifest)
                  (j/get :version)))
 
-;; TODO set once atom?
-(def playback-object (atom (av/Audio.Sound.)))
+;; defonce so that hot reloads don't blow away the object while on the playback screen
+(defonce playback-object (atom (av/Audio.Sound.)))
 
 (defn <get-feed [url]
   (go (-> url
@@ -109,7 +109,7 @@
                            (-> fs (j/call :readAsStringAsync app-db-file)
                                <p!
                                edn/read-string
-                               (#(>evt [:event/load-app-db {:app-db  %
+                               (#(>evt [:event/load-app-db {:app-db  {}
                                                             :version version}])))
                            (catch js/Object e
                              (-> rn/Alert (j/call :alert "Failure on readAsStringAsync" (str e))))))))))
@@ -181,13 +181,13 @@
                                     ;; it seems like there could be an instance where nothing is loaded
                                     ;; and it just sits with a spinner otherwise
                                     :status/loading)]
-                            (>evt [:event/update-feed-item
-                                   {:feed-item/id feed-item-id
-                                    :feed/id      feed-id
-                                    :feed-item    {:feed-item/duration (or (j/get AVPlaybackStatus :durationMillis) 0)
-                                                   :feed-item/position (or (j/get AVPlaybackStatus :positionMillis) 0)}}])
-                            (>evt [:event/update-selected-item-status
-                                   {:status status}]))))))))
+                            (>evt-sync [:event/update-feed-item
+                                        {:feed-item/id feed-item-id
+                                         :feed/id      feed-id
+                                         :feed-item    {:feed-item/duration (or (j/get AVPlaybackStatus :durationMillis) 0)
+                                                        :feed-item/position (or (j/get AVPlaybackStatus :positionMillis) 0)}}])
+                            (>evt-sync [:event/update-selected-item-status
+                                        {:status status}]))))))))
 
 (reg-fx :effect/play-selected-item
         #(go
@@ -210,9 +210,9 @@
 
 (reg-fx :effect/share
         (fn [{feed-title :feed/title
-             item-title :feed-item/title
-             position   :feed-item-note/position
-             note-text  :feed-item-note/text}]
+              item-title :feed-item/title
+              position   :feed-item-note/position
+              note-text  :feed-item-note/text}]
           (let [text         (-> note-text
                                  (cm/replaceMentionValues
                                    (fn [mt] (str "[[" (j/get mt :name) "]]"))))
@@ -224,6 +224,14 @@
                                                position-str " \n "
                                                text " \n "
                                                )}))))))
+
+(reg-fx :effect/set-playback-rate
+        #(go
+           (tap> {:location :effect/set-playback-rate
+                  :rate     %})
+           (-> @playback-object
+               (j/call :setStatusAsync (j/lit {:rate % :shouldCorrectPitch true}))
+               <p!)))
 
 (comment
   (go
