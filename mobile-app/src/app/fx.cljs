@@ -29,6 +29,13 @@
 ;; defonce so that hot reloads don't blow away the object while on the playback screen
 (defonce playback-object (atom (av/Audio.Sound.)))
 
+;; set up background modes
+(go (<p! (j/call av/Audio :setAudioModeAsync
+                 {:interruptionModeAndroid (j/get av/Audio :INTERRUPTION_MODE_ANDROID_DUCK_OTHERS)
+                  :interruptionModeIOS     (j/get av/Audio :INTERRUPTION_MODE_IOS_DUCK_OTHERS)
+                  :playsInSilentModeIOS    true
+                  :staysActiveInBackground true})))
+
 (defn <get-feed [url]
   (go (-> url
           http/get
@@ -71,6 +78,7 @@
   (go
     (let [feed (<! (<get-feed url))]
       (dispatch-update-feed id feed))))
+
 (reg-fx :effect/refresh-feed <refresh-feed)
 
 (reg-fx :effect/refresh-feeds
@@ -130,6 +138,7 @@
   (-> @!navigation-ref
       ;; no params yet for second arg
       (j/call :navigate (get screen-key-name-mapping screen-key) (j/lit {}))))
+
 (reg-fx :effect/navigate navigate)
 
 (reg-fx :effect/load-playback-object
