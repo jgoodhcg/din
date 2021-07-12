@@ -9,7 +9,7 @@ on:
 env:
   node_version: 14
 jobs:
-  deploy-lambda:
+  deploy-titles-lambda:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -24,10 +24,10 @@ jobs:
       - run: |
           cd $GITHUB_WORKSPACE/backend
           yarn install
-          yarn shadow-cljs release backend
+          yarn shadow-cljs release titles-lambda
           rm -rf node_modules
           yarn install --production
-          cd $GITHUB_WORKSPACE/backend/build
+          cd $GITHUB_WORKSPACE/backend/build/titles
           cp -r $GITHUB_WORKSPACE/backend/node_modules .
           zip -r deployment.zip main.js node_modules
       - name: default deploy
@@ -37,7 +37,7 @@ jobs:
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws_region: ${{ secrets.AWS_REGIOn }}
           function_name: din-page-titles
-          zip_file: backend/build/deployment.zip
+          zip_file: backend/build/titles/deployment.zip
           memory_size: 1600
           timeout: 240
           handler: main.handler

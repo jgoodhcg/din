@@ -13,8 +13,8 @@
    :output-to "mobile-app/test/node-tests.js"
    :autorun   true}
 
-  :backend
+  :titles-lambda
   {:target     :node-library
-   :exports    {:handler backend.main/handler}
-   :output-dir "backend/build"
-   :output-to  "backend/build/main.js"}}}
+   :exports    {:handler backend.titles/handler}
+   :output-dir "backend/build/titles/"
+   :output-to  "backend/build/titles/main.js"}}}
