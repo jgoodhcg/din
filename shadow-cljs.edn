@@ -15,6 +15,6 @@
 
   :titles-lambda
   {:target     :node-library
-   :exports    {:handler backend.titles/handler}
-   :output-dir "backend/build/titles/"
-   :output-to  "backend/build/titles/main.js"}}}
+   :exports    {:handler hacked-api.titles/handler}
+   :output-dir "backend/hacked_api/build/titles/"
+   :output-to  "backend/hacked_api/build/titles/main.js"}}}

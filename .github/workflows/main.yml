@@ -22,13 +22,13 @@ jobs:
           cli: '1.10.1.469'
       - uses: borales/actions-yarn@v2.0.0
       - run: |
-          cd $GITHUB_WORKSPACE/backend
+          cd $GITHUB_WORKSPACE/backend/hacked_api
           yarn install
           yarn shadow-cljs release titles-lambda
           rm -rf node_modules
           yarn install --production
-          cd $GITHUB_WORKSPACE/backend/build/titles
-          cp -r $GITHUB_WORKSPACE/backend/node_modules .
+          cd $GITHUB_WORKSPACE/backend/hacked_api/build/titles
+          cp -r $GITHUB_WORKSPACE/backend/hacked_api/node_modules .
           zip -r deployment.zip main.js node_modules
       - name: default deploy
         uses: appleboy/lambda-action@master
@@ -37,7 +37,7 @@ jobs:
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws_region: ${{ secrets.AWS_REGIOn }}
           function_name: din-page-titles
-          zip_file: backend/build/titles/deployment.zip
+          zip_file: backend/hacked_api/build/titles/deployment.zip
           memory_size: 1600
           timeout: 240
           handler: main.handler
