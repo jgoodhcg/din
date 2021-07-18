@@ -17,4 +17,10 @@
   {:target     :node-library
    :exports    {:handler hacked-api.titles/handler}
    :output-dir "backend/hacked_api/build/titles/"
-   :output-to  "backend/hacked_api/build/titles/main.js"}}}
+   :output-to  "backend/hacked_api/build/titles/main.js"}
+
+  :stripe-id-lambda
+  {:target     :node-library
+   :exports    {:handler stripe.id/handler}
+   :output-dir "backend/stripe/build/stripe_id/"
+   :output-to  "backend/stripe/build/stripe_id/main.js"}}}
