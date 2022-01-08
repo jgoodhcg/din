@@ -1,6 +1,7 @@
 {:paths ["mobile-app/src"
          "backend/hacked_api/src"
-         "backend/stripe/src"]
+         "backend/stripe/src"
+         "backend/common/src"]
  :deps  {applied-science/js-interop          {:mvn/version "0.2.7"}
          camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.1"}
          com.rpl/specter                     {:mvn/version "1.1.3"}

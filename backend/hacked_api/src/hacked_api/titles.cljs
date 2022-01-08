@@ -3,13 +3,12 @@
    ["chrome-aws-lambda" :as chromium]
    [applied-science.js-interop :as j]
    [cljs.core.async :refer [go]]
-   [cljs.core.async.interop :refer [<p!]]))
-
-(defn log [& args] (apply (.-log js/console) args))
+   [cljs.core.async.interop :refer [<p!]]
+   [common.misc :refer [log log-error log-debug error-msg]]))
 
 (defn handler [event context callback]
   (go
-    (log "enter the go block")
+    (log-debug "enter the go block")
     (let [{:keys [body]}                 (-> event (js->clj :keywordize-keys true))
           {:keys [graph email password]} (-> body js/JSON.parse (js->clj :keywordize-keys true))
           maybe-path                     (<p! (-> chromium (j/get :executablePath)))
@@ -29,30 +28,30 @@
           page                           (<p! (-> browser (j/call :newPage)))]
 
       (try
-        (log "made it to the try")
+        (log-debug "made it to the try")
         (-> page (j/call :setDefaultTimeout 240000))
-        (log "set timeout")
+        (log-debug "set timeout")
         (<p! (-> page (j/call :goto (str "https://roamresearch.com/#/app/" graph))))
-        (log (str "got to roam with graph name: " graph))
+        (log-debug (str "got to roam with graph name: " graph))
         (<p! (-> page (j/call :waitForNavigation)))
-        (log "waited for nav")
+        (log-debug "waited for nav")
         (<p! (-> page (j/call :waitForSelector "input[name=email]")))
-        (log "waited for email input")
+        (log-debug "waited for email input")
         (<p! (-> page (j/call :type "input[name=email]" email)))
-        (log (str "typed email"))
+        (log-debug (str "typed email"))
         (<p! (-> page (j/call :type "input[name=password]" password)))
-        (log "typed password")
+        (log-debug "typed password")
         (<p! (-> page (j/call :click ".bp3-button")))
-        (log "pressed login button")
+        (log-debug "pressed login button")
         (<p! (-> page (j/call :waitForSelector ".bp3-icon-more")))
-        (log "waited for graph load")
+        (log-debug "waited for graph load")
         (let [titles (<p! (-> page (j/call :evaluate
                                            (fn [q]
                                              (js/Promise.resolve
                                                (.q (.-roamAlphaAPI js/window) q)))
                                            "[:find ?n :where [?e :node/title ?n]]")))]
 
-          (log (str "got " (count (js->clj titles)) " titles"))
+          (log-debug (str "got " (count (js->clj titles)) " titles"))
 
           (callback
             nil
@@ -63,9 +62,9 @@
                  (clj->js {:titles titles}))})))
 
         (catch js/Error err
-          (log "caught error")
-          (log (ex-cause err))
-          (callback nil (clj->js {:statusCode 500 :body err}))))
+          (log-error "caught error")
+          (log-error (ex-cause err))
+          (callback nil (clj->js {:statusCode 500 :body error-msg}))))
 
       (.close browser))))
 
