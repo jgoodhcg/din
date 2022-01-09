@@ -19,4 +19,5 @@
          thheller/shadow-cljs                {:mvn/version "2.11.1"}
          com.wsscode/pathom3                 {:mvn/version "2022.01.09-alpha"}
          funcool/promesa                     {:mvn/version "6.0.2"}
-         com.wsscode/promesa-bridges         {:mvn/version "2021.01.20"}}}
+         com.wsscode/promesa-bridges         {:mvn/version "2021.01.20"}
+         com.cognitect/transit-cljs          {:mvn/version "0.8.269"}}}
