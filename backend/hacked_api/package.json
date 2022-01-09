@@ -10,7 +10,7 @@
   },
   "keywords": [],
   "author": "jgood",
-  "license": "MIT",
+  "private": true,
   "devDependencies": {
     "puppeteer": "^8.0.0",
     "shadow-cljs": "^2.7.8",

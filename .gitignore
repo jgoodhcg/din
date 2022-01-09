@@ -8,3 +8,7 @@ node_modules/
 backend/hacked_api/build/
 
 backend/stripe/build/
+
+.clj-kondo/
+
+backend/eql/build/

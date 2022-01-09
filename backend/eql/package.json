@@ -1,0 +1,10 @@
+{
+  "name": "eql",
+  "version": "0.0.1",
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "stripe": "^8.163.0",
+    "ws": "^7.5.3"
+  }
+}
