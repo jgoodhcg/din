@@ -10,10 +10,11 @@
    [com.wsscode.pathom3.connect.built-in.resolvers :as pbir]
    [com.wsscode.pathom3.connect.operation :as pco]
    [com.wsscode.pathom3.interface.async.eql :as p.a.eql]
-   [promesa.core :as p]
+   [promesa.core :as promesa]
 
    [common.misc :refer [log log-debug log-error error-msg get-envvar]]
-   [eql.stripe.resolvers :refer [stripe-key stripe-client customers]]
+   [eql.stripe.resolvers]
+   [eql.registry :refer [resolvers]]
    ))
 
 (pco/defresolver test-slow-resolver []
@@ -22,37 +23,31 @@
     (<! (async/timeout 400))
     {:test/slow-response "done"}))
 
-(def test-constant-resolver (pbir/constantly-resolver :test/constant "I'm always the same"))
-
-(def test-attr-resolver (pbir/single-attr-resolver :test/attr-input :test/attr-output #(str % " plus more")))
-
-(def env (pci/register [test-slow-resolver
-                        test-constant-resolver
-                        test-attr-resolver
-                        stripe-key
-                        stripe-client
-                        customers
-                        ]))
-
 (defn handler [event context callback]
   (try
-    (log-debug "In the try")
     (let [{:keys [body]} (-> event (js->clj :keywordize-keys true))
+          sub            (-> event (j/get-in [:requestContext :authorizer :claims :sub]))
+          email          (-> event (j/get-in [:requestContext :authorizer :claims :email]))
           r              (t/reader :json)
           w              (t/writer :json)
           eql-req        (->> body (t/read r))
-          validity       (atom {:valid true})]
-      (log-debug "Validating query")
+          validity       (atom {:valid true})
+          ;; It should be ok to make the index in a let since every invocation is a new runtime
+          index          (pci/register
+                           (-> @resolvers
+                               ;; TODO 2022-01-09 Justin How can I set these in the "context" of resolution without tampering with the eql-req?
+                               ;; When that is refactored this can go back into a def and there will be less of a chance of
+                               ;; the "tried to register duplicated resolver" error at the repl
+                               (conj (pbir/constantly-resolver :eql.cognito/sub sub))
+                               (conj (pbir/constantly-resolver :eql.cognito/email email))))]
       (->> eql-req
            (postwalk #(when (and (keyword? %)
                                  (namespace %)
                                  (includes? (namespace %) "eql"))
                         (reset! validity {:valid               false
                                           :invalid-request-key %}))))
-      (log-debug "In the let body")
       (if (-> @validity :valid)
-        (p/let [res (p.a.eql/process env eql-req)]
-          (log-debug "In promesa let body")
+        (promesa/let [res (p.a.eql/process index eql-req)]
           (callback nil (j/lit {:statusCode 200 :body (t/write w res)})))
         (do
           (log-debug @validity)
@@ -70,12 +65,21 @@
              :test/constant
              {'(:>/params-test {:test/attr-input "hello"})
               [:test/attr-output]}]]
-    (handler (j/lit {:body (t/write w req)}) ;; event
+    (handler (j/lit {:body           (t/write w req)
+                     :requestContext {:authorizer {:claims {:sub   "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"
+                                                            :email "jgoodhcg+bbtest1@gmail.com"}}}}) ;; event
              nil ;; context
              #(-> %2 (j/get :body) (->> (t/read r)) tap>)) ;; callback
     )
 
-  (p/let [req [:eql.stripe.resolvers/customers]
-          res (p.a.eql/process env req)]
+  ;; This side effects and shouldn't be run more than once in the same runtime
+  (def index (pci/register
+               (-> @resolvers
+                   (conj (pbir/constantly-resolver :eql.cognito/sub "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"))
+                   (conj (pbir/constantly-resolver :eql.cognito/email "jgoodhcg+bbtest1@gmail.com")))))
+
+  ;; This is useful for testing "private" resolvers "eql.*"
+  (promesa/let [req   [:eql.stripe.resolvers/stripe-id :eql.cognito/email]
+                res   (->> req (p.a.eql/process index))]
     (tap> res))
   )
