@@ -105,7 +105,6 @@
           (j/get :jwtToken)
           tap>))
 
-
   ;; Call api
   (def jwt (atom nil))
 

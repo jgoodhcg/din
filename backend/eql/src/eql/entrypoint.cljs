@@ -73,13 +73,14 @@
     )
 
   ;; This side effects and shouldn't be run more than once in the same runtime
-  (def index (pci/register
-               (-> @resolvers
-                   (conj (pbir/constantly-resolver :eql.cognito/sub "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"))
-                   (conj (pbir/constantly-resolver :eql.cognito/email "jgoodhcg+bbtest1@gmail.com")))))
+  (def index
+    (pci/register
+     (-> @resolvers
+         (conj (pbir/constantly-resolver :eql.cognito/sub "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"))
+         (conj (pbir/constantly-resolver :eql.cognito/email "jgoodhcg+bbtest1@gmail.com")))))
 
   ;; This is useful for testing "private" resolvers "eql.*"
-  (promesa/let [req   [:eql.stripe.resolvers/stripe-id :eql.cognito/email]
+  (promesa/let [req   [:eql.stripe.resolvers/products]
                 res   (->> req (p.a.eql/process index))]
     (tap> res))
   )

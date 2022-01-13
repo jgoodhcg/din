@@ -30,11 +30,11 @@
       context)))
 
 (def spec-validation
-  (if false ;; goog.DEBUG
-    (->interceptor
+(->interceptor
       :id :spec-validation
-      :after validate-spec)
-    ->interceptor))
+      :after (if goog.DEBUG
+               validate-spec
+               identity)))
 
 (def persist
   (->interceptor

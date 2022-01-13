@@ -70,7 +70,7 @@
                                (case item-sort
                                  :item-sort/ascending  "sort-ascending"
                                  :item-sort/descending "sort-descending"
-                                 "sort-descending")
+                                 "sort-ascending")
                                :feed/item-filter-icon
                                (case item-filter
                                  :item-filter/finished "filter"

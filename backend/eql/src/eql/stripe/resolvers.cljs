@@ -11,7 +11,7 @@
    [potpuri.core :as p]
 
    [common.misc :refer [log-debug log-error error-msg get-envvar]]
-   [eql.registry :refer [add-resolvers]]
+   [eql.registry :refer [add-resolvers!]]
    ))
 
 (defn stripe-customer-xform
@@ -55,9 +55,9 @@
 
 (pco/defresolver stripe-id
   [{email                    :eql.cognito/email
+    sub                      :eql.cognito/sub
     <get-customers-for-email ::<get-customers-for-email-fn
-    <create-customer         ::<create-customer-fn
-    sub                      :eql.cognito/sub}]
+    <create-customer         ::<create-customer-fn}]
   {::pco/output [::stripe-id]}
   (go
     (let [first-customer-batch (<! (<get-customers-for-email {:email email :limit 100}))]
@@ -75,70 +75,81 @@
                                 :limit          100
                                 :starting_after (-> customer-batch last :id)})))))))))))
 
-(add-resolvers [stripe-key
-                stripe-client
-                <get-customers-for-email-fn
-                <create-customer-fn
-                stripe-id])
-
-(comment
+(pco/defresolver products
+  [{stripe ::stripe-client}]
+  {::pco/output [{::products [::product-id]}]}
   (go
-    (let [stripe (-> :STRIPE_KEY get-envvar stripe-construct)
-          email  "jgoodhcg+bbtest1@gmail.com"]
-      (-> (p/map-of stripe email) <get-customers <! tap>))))
+     (-> stripe
+         (j/get :products)
+         (j/call :list (j/lit {:limit 100}))
+         <p!
+         (js->clj :keywordize-keys true)
+         ((fn [{:keys [has_more data]}]
+            (when has_more (throw "We have more than 100 products, time to write a loop!"))
+            (->> data (mapv #(rename-keys % {:id ::product-id}))))))))
+
+(pco/defresolver prices
+  [{stripe     ::stripe-client}]
+  {::pco/output [{::prices [::price-id ::product-id]}]}
+  (go
+     (-> stripe
+         (j/get :prices)
+         (j/call :list (j/lit {:limit 100}))
+         <p!
+         (js->clj :keywordize-keys true)
+         ((fn [{:keys [has_more data]}]
+            (when has_more (throw "We have more than 100 products, time to write a loop!"))
+            (->> data (mapv #(rename-keys % {:id ::price-id :product ::product-id}))))))))
 
 (comment
-  (defn <get-customers [{:keys [stripe email limit starting-after]}]
+  (let [stripe-client (stripe-construct (get-envvar :STRIPE_KEY))]
     (go
-      (-> stripe
-          (j/get :customers)
-          (j/call :list (cond-> {:email email}
-                          (some? limit)
-                          (merge {:limit limit})
-                          (some? starting-after)
-                          (merge {:starting_after starting-after})
-                          true clj->js))
-          <p!
-          (js->clj :keywordize-keys true))))
+      (-> {::stripe-client stripe-client}
+          prices ;; swap out products
+          <!
+          tap>))))
 
-  (defn <create-customer [{:keys [stripe email sub]}]
+(pco/defresolver product
+  [{stripe     ::stripe-client
+    product-id ::product-id}]
+  {::pco/output [::product-name ::product-id]}
+  (go
+    (-> stripe
+        (j/get :products)
+        (j/call :retrieve product-id)
+        <p!
+        (js->clj :keywordize-keys true)
+        (rename-keys {:id ::product-id :name ::product-name}))))
+
+(pco/defresolver price
+  [{stripe     ::stripe-client
+    price-id ::price-id}]
+  {::pco/output [::price-id ::product-id ::unit-mount]}
+  (go
+    (-> stripe
+        (j/get :prices)
+        (j/call :retrieve price-id)
+        <p!
+        (js->clj :keywordize-keys true)
+        (rename-keys {:id ::price-id :product ::product-id :unit_amount ::unit-amount}))))
+
+(comment
+  (let [stripe-client (stripe-construct (get-envvar :STRIPE_KEY))
+        ;; product-id    "prod_KwFuyzREssNGFu"
+        price-id      "price_1KGNOkBAaAf4dYG6cMdtieqH"]
     (go
-      (-> stripe
-          (j/get :customers)
-          (j/call :create (j/lit {:email email :metadata {:sub sub}}))
-          <p!
-          (js->clj :keywordize-keys true))))
-
-  (defn handler [event context callback]
-    (try
-      (log-debug "In the try")
-      (let [{:keys [body]}      (-> event (js->clj :keywordize-keys true))
-            {:keys [sub email]} (-> body js/JSON.parse (js->clj :keywordize-keys true))
-            stripe              (stripe-construct (get-envvar :STRIPE_KEY))
-            limit               100]
-        (log-debug "In the let body")
-        (go
-          (log-debug "In outer go")
-          (let [first-customer-batch (<! (<get-customers (p/map-of stripe email limit)))]
-            (log-debug (str "first customer batch size: " (count first-customer-batch)))
-            (go-loop [customer-batch first-customer-batch]
-              (log-debug "In go-loop")
-              (log-debug (str "Current customer batch size " (count customer-batch)))
-              (let [matching-customer (->> customer-batch
-                                           :data
-                                           (some #(when (= sub (get-in % [:metadata :sub])) %)))]
-                (if (some? matching-customer)
-                  (do (log-debug (str "Matching customer found " matching-customer))
-                      matching-customer)
-                  (if (or (-> customer-batch :has_more not) (empty? customer-batch))
-                    (do (log-debug (str "Exhausted customer list, creating customer " (p/map-of email sub)))
-                        (<! (<create-customer (p/map-of stripe email sub))))
-                    (do (log-debug "Getting next customer batch")
-                        (recur (<! (<get-customers (merge (p/map-of stripe email)
-                                                          {:starting_after (-> customer-batch last :id)}))))))))))))
-      (catch js/Error err
-        (log-error "caught error")
-        (log-error (ex-cause err))
-        (callback nil (clj->js {:statusCode 500 :body error-msg})))))
-
+      (-> {::stripe-client stripe-client
+           ;; ::product-id product-id
+           ::price-id price-id}
+          price ;; swap out product
+          <!
+          tap>)))
   )
+
+
+(add-resolvers! [stripe-key
+                 stripe-client
+                 <get-customers-for-email-fn
+                 <create-customer-fn
+                 stripe-id
+                 products])
