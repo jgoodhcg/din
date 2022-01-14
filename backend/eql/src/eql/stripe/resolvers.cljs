@@ -146,10 +146,12 @@
           tap>)))
   )
 
-
 (add-resolvers! [stripe-key
                  stripe-client
                  <get-customers-for-email-fn
                  <create-customer-fn
                  stripe-id
-                 products])
+                 products
+                 prices
+                 product
+                 price])
