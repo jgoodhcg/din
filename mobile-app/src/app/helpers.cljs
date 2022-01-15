@@ -19,7 +19,8 @@
 
 (def screen-key-name-mapping #:screen {:feed-item "Feed Item"
                                        :feed      "Feed"
-                                       :feeds     "Feeds"})
+                                       :feeds     "Feeds"
+                                       :payment   "Payment"})
 
 (defn screen-key->name [k] (get screen-key-name-mapping k))
 (defn screen-name->key [n] (-> screen-key-name-mapping map-invert (get n)))

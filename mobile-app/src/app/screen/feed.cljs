@@ -3,12 +3,6 @@
    ["react-native" :as rn]
    ["react-native-paper" :as paper]
    ["react-native-gesture-handler" :as g]
-   ["../../aws-exports" :default aws-config]
-
-   ["expo-file-system" :as fs]
-   [cljs.core.async :refer [go <!]]
-   [cljs.core.async.interop :refer [<p!]]
-   [clojure.edn :as edn]
 
    [applied-science.js-interop :as j]
    [reagent.core :as r]
