@@ -11,7 +11,7 @@
    [potpuri.core :as p]
 
    [common.misc :refer [log-debug log-error error-msg get-envvar]]
-   [eql.registry :refer [add-resolvers!]]
+   [eql.registry :refer [add-resolvers-or-mutations!]]
    ))
 
 (defn stripe-customer-xform
@@ -146,12 +146,12 @@
           tap>)))
   )
 
-(add-resolvers! [stripe-key
-                 stripe-client
-                 <get-customers-for-email-fn
-                 <create-customer-fn
-                 stripe-id
-                 products
-                 prices
-                 product
-                 price])
+(add-resolvers-or-mutations! [stripe-key
+                              stripe-client
+                              <get-customers-for-email-fn
+                              <create-customer-fn
+                              stripe-id
+                              products
+                              prices
+                              product
+                              price])

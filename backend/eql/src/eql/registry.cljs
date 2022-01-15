@@ -1,7 +1,7 @@
 (ns eql.registry)
 
-(def resolvers (atom []))
+(def items (atom []))
 
-(defn add-resolvers!
-  [new-resolvers]
-  (swap! resolvers #(-> % (concat new-resolvers) vec)))
+(defn add-resolvers-or-mutations!
+  [new-items]
+  (swap! items #(-> % (concat new-items) vec)))
