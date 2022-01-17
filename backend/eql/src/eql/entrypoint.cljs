@@ -17,38 +17,44 @@
    [eql.stripe.resolvers]
    [eql.stripe.mutations]
 
-   ))
+
+   [potpuri.core :as p]))
 
 (def index (-> (pci/register @items)
                (p.plugin/register pbip/mutation-resolve-params)))
 
 (defn handler [event context callback]
   (try
-    (let [{:keys [body]} (-> event (js->clj :keywordize-keys true))
-          sub            (-> event (j/get-in [:requestContext :authorizer :claims :sub]))
-          email          (-> event (j/get-in [:requestContext :authorizer :claims :email]))
+    (log-debug "In try")
+    (log-debug (p/map-of event))
+    (let [sub            (-> event (j/get-in [:requestContext :authorizer :jwt :claims :sub]))
+          email          (-> event (j/get-in [:requestContext :authorizer :jwt :claims :email]))
           r              (t/reader :json)
           w              (t/writer :json)
-          eql-req        (->> body (t/read r))
+          eql-req        (-> event (j/get :body) js/JSON.parse (j/get :transit-req) (->> (t/read r)))
           validity       (atom {:valid true})]
 
+      (log-debug (p/map-of sub email eql-req))
       (->> eql-req
            (postwalk #(when (and (keyword? %)
                                  (namespace %)
                                  (includes? (namespace %) "eql"))
                         (reset! validity {:valid               false
                                           :invalid-request-key %}))))
+      (log-debug (str "validity: " @validity))
       (if (-> @validity :valid)
         (promesa/let [response (->> `[{(:>/res {:eql.cognito/sub ~sub
                                                 :eql.cognito/email ~email}) ~eql-req}]
                                     (p.a.eql/process index))
                       result (get response :>/res)]
+          (log-debug (p/map-of response result))
           (callback nil (j/lit {:statusCode 200 :body (t/write w result)})))
         (do
           (log-debug @validity)
           (callback nil (j/lit {:statusCode 500 :body (t/write w @validity)})))))
     (catch js/Error err
       (log-error "caught error")
+      (log-error err)
       (log-error (ex-cause err))
       (callback nil (clj->js {:statusCode 500 :body error-msg})))))
 
@@ -58,11 +64,17 @@
   (let [w   (t/writer :json)
         r   (t/reader :json)
         req []]
-    (handler (j/lit {:body           (t/write w req)
-                     :requestContext {:authorizer {:claims {:sub   "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"
-                                                            :email "jgoodhcg+bbtest1@gmail.com"}}}}) ;; event
+    (handler (-> {:body           (js/JSON.stringify (j/lit {:transit-req (t/write w req)}))
+                  :requestContext {:authorizer
+                                   {:jwt
+                                       {:claims
+                                        {:sub   "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"
+                                         :email "jgoodhcg+bbtest1@gmail.com"}}}}}
+                 clj->js)
              nil ;; context
-             #(-> %2 (j/get :body) (->> (t/read r)) tap>)) ;; callback
+            ;; #(-> %2 (j/get :body) (->> (t/read r)) tap>)
+            #(tap> %2)
+             ) ;; callback
     )
 
   ;; This is useful for testing "private" resolvers "eql.*"
@@ -71,4 +83,12 @@
                         [:eql.stripe.resolvers/stripe-id]}]
                 res   (->> req (p.a.eql/process index))]
     (tap> res))
+
+(let [w   (t/writer :json)
+      r   (t/reader :json)
+      req []]
+  (->> req (t/write w) tap>)
+ ;; (->> "[]" (t/read r))
+  )
+
   )

@@ -109,13 +109,21 @@
           (j/get :jwtToken)
           tap>))
 
+(go (-> Auth
+          (j/call :currentSession)
+          <p!
+          (j/call :getIdToken)
+          (j/get :jwtToken)
+          tap>))
+
   ;; Call api
   (def jwt (atom nil))
 
   (go (-> Auth
           (j/call :currentSession)
           <p!
-          (j/call :getAccessToken)
+          ;; (j/call :getAccessToken)
+          (j/call :getIdToken)
           (j/get :jwtToken)
           (->> (reset! jwt))))
 
@@ -125,6 +133,18 @@
                       :json-params       {:email    "xxx"
                                           :graph    "xxx"
                                           :password "xxx"}})
+          <!
+          ;; :body
+          ;; (#(-> js/JSON (j/call :parse %)))
+          ;; (js->clj :keywordize-keys true)
+          ;; :result
+          tap>))
+
+  (go (-> ;; "https://rou216ssnh.execute-api.us-east-2.amazonaws.com/default/din-eql"
+          "https://rf8gjfxxbd.execute-api.us-east-2.amazonaws.com/default/din-eql"
+          (http/post {:with-credentials? false
+                      :headers           {"Authorization" (str "Bearer " @jwt)}
+                      :json-params       {:transit-req "[]"}})
           <!
           ;; :body
           ;; (#(-> js/JSON (j/call :parse %)))

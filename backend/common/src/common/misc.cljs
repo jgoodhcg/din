@@ -1,11 +1,11 @@
 (ns common.misc
   (:require [applied-science.js-interop :as j]))
 
-(defn log [& args] (-> js/console (j/get :log) (apply args)))
+(defn log [& args] (-> js/console (j/get :log) (apply (clj->js args))))
 
-(defn log-debug [& args] (-> js/console (j/get :debug) (apply args)))
+(defn log-debug [& args] (-> js/console (j/get :debug) (apply (clj->js args))))
 
-(defn log-error [& args] (-> js/console (j/get :error) (apply args)))
+(defn log-error [& args] (-> js/console (j/get :error) (apply (clj->js args))))
 
 (def error-msg "Captain, we have a problem ...")
 
