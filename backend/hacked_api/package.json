@@ -1,19 +1,11 @@
 {
   "name": "din-hacked-api",
   "version": "0.0.1",
-  "description": "",
   "main": "index.js",
-  "scripts": {
-    "watch": "shadow-cljs watch backend",
-    "compile": "shadow-cljs compile backend",
-    "build": "shadow-cljs release backend"
-  },
-  "keywords": [],
-  "author": "jgood",
   "private": true,
   "devDependencies": {
     "puppeteer": "^8.0.0",
-    "shadow-cljs": "^2.7.8",
+    "shadow-cljs": "^2.16.12",
     "source-map-support": "^0.5.9",
     "ws": "^6.1.2"
   },

@@ -3,8 +3,12 @@
   "version": "0.0.1",
   "main": "index.js",
   "private": true,
+  "devDependencies": {
+    "shadow-cljs": "^2.16.12",
+    "source-map-support": "^0.5.9",
+    "ws": "^6.1.2"
+  },
   "dependencies": {
-    "stripe": "^8.163.0",
-    "ws": "^7.5.3"
+    "stripe": "^8.163.0"
   }
 }
