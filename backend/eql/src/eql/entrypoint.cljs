@@ -80,7 +80,7 @@
   ;; This is useful for testing "private" resolvers "eql.*"
   (promesa/let [req   [{'(:>/req {:eql.cognito/sub "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"
                                   :user/email "jgoodhcg+bbtest1@gmail.com"})
-                        [:eql.stripe.resolvers/stripe-id]}]
+                        [:eql.stripe.resolvers/customer-id]}]
                 res   (->> req (p.a.eql/process index))]
     (tap> res))
 

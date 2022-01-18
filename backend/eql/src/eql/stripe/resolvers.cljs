@@ -21,8 +21,8 @@
     (-> stripe-customer
         (merge {:eql.cognito/sub sub
                 :stripe/free-pass free-pass})
-        (rename-keys {:email :user/email :id ::stripe-id})
-        (select-keys [:user/email :eql.cognito/sub ::stripe-id :stripe/free-pass]))))
+        (rename-keys {:email :user/email :id ::customer-id})
+        (select-keys [:user/email :eql.cognito/sub ::customer-id :stripe/free-pass]))))
 
 (def stripe-key (pbir/constantly-resolver ::stripe-key (get-envvar :STRIPE_KEY)))
 
@@ -60,7 +60,7 @@
     sub                      :eql.cognito/sub
     <get-customers-for-email ::<get-customers-for-email-fn
     <create-customer         ::<create-customer-fn}]
-  {::pco/output [::stripe-id :user/email :stripe/free-pass]}
+  {::pco/output [::customer-id :user/email :stripe/free-pass]}
   (go
     (let [first-customer-batch (<! (<get-customers-for-email {:email email :limit 100}))]
       (<! (go-loop [customer-batch first-customer-batch]
@@ -79,8 +79,10 @@
 
 (comment
   (let [stripe (stripe-construct (get-envvar :STRIPE_KEY))
-        params (-> {:eql.cognito/sub "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"
-                    :user/email      "jgoodhcg+bbtest1@gmail.com"}
+        params (-> {;; :eql.cognito/sub "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"
+                    ;; :user/email      "jgoodhcg+bbtest1@gmail.com"
+                    :eql.cognito/sub "3ac0d472-4d29-4064-9e42-cc1376997220"
+                    :user/email      "jgoodhcg+bbtest2@gmail.com"}
                    (merge (<get-customers-for-email-fn {::stripe-client stripe}))
                    (merge (<create-customer-fn {::stripe-client stripe})))]
     (go
@@ -101,7 +103,9 @@
          (js->clj :keywordize-keys true)
          ((fn [{:keys [has_more data]}]
             (when has_more (throw "We have more than 100 products, time to write a loop!"))
-            (->> data (mapv #(rename-keys % {:id ::product-id}))))))))
+            {::products (->> data
+                             (mapv #(rename-keys % {:id ::product-id}))
+                             (mapv #(select-keys % [::product-id])))})))))
 
 (pco/defresolver prices
   [{stripe     ::stripe-client}]
@@ -114,7 +118,9 @@
          (js->clj :keywordize-keys true)
          ((fn [{:keys [has_more data]}]
             (when has_more (throw "We have more than 100 products, time to write a loop!"))
-            (->> data (mapv #(rename-keys % {:id ::price-id :product ::product-id}))))))))
+            {::prices (->> data
+                           (mapv #(rename-keys % {:id ::price-id :product ::product-id}))
+                           (mapv #(select-keys % [::price-id ::product-id])))})))))
 
 (comment
   (let [stripe-client (stripe-construct (get-envvar :STRIPE_KEY))]
@@ -135,7 +141,8 @@
         (j/call :retrieve product-id)
         <p!
         (js->clj :keywordize-keys true)
-        (rename-keys {:id ::product-id :name ::product-name}))))
+        (rename-keys {:id ::product-id :name ::product-name})
+        (select-keys [::product-id ::product-name]))))
 
 (pco/defresolver price
   [{stripe     ::stripe-client
@@ -147,7 +154,8 @@
         (j/call :retrieve price-id)
         <p!
         (js->clj :keywordize-keys true)
-        (rename-keys {:id ::price-id :product ::product-id :unit_amount ::unit-amount}))))
+        (rename-keys {:id ::price-id :product ::product-id :unit_amount ::unit-amount})
+        (select-keys [::price-id ::product-id ::unit-amount]))))
 
 (comment
   (let [stripe-client (stripe-construct (get-envvar :STRIPE_KEY))
@@ -162,6 +170,64 @@
           tap>)))
   )
 
+(pco/defresolver subscriptions
+  [{stripe    ::stripe-client
+    customer-id ::customer-id}]
+  {::pco/output [{::subscriptions [::subscription-id]}]}
+  (go
+     (-> stripe
+         (j/get :subscriptions)
+         (j/call :list (j/lit {:limit 100
+                               :customer customer-id}))
+         <p!
+         (js->clj :keywordize-keys true)
+         ((fn [{:keys [has_more data]}]
+            (when has_more (throw "A Customer has been found with more than 100 subscriptions, time to write a loop!"))
+            {::subscriptions (->> data
+                                  (mapv #(rename-keys % {:id ::subscription-id}))
+                                  (mapv #(select-keys % [::subscription-id])))})))))
+
+(comment
+  (let [stripe-client (stripe-construct (get-envvar :STRIPE_KEY))
+        customer-id     "cus_KvZTT4PMdlahLM"]
+    (go
+      (-> {::stripe-client stripe-client
+           ::customer-id     customer-id}
+          subscriptions
+          <!
+          tap>)))
+  )
+
+(pco/defresolver active-subscription
+  [{stripe      ::stripe-client
+    customer-id ::customer-id}]
+  {::pco/output [:stripe/has-active-subscription?]}
+  (go
+    {:stripe/has-active-subscription?
+     (-> stripe
+         (j/get :subscriptions)
+         (j/call :list (j/lit {:limit    100
+                               :customer customer-id
+                               :status   "active"}))
+         <p!
+         (js->clj :keywordize-keys true)
+         ((fn [{:keys [has_more data]}]
+            (when has_more (throw "A Customer has been found with more than 100 subscriptions, time to write a loop!"))
+            data))
+         (#(-> % count (> 0))))}))
+
+(comment
+  (let [stripe-client (stripe-construct (get-envvar :STRIPE_KEY))
+        ;; customer-id     "cus_KvZTT4PMdlahLM"
+        customer-id   "cus_KzHJ9KPtx7xEqJ"]
+    (go
+      (-> {::stripe-client stripe-client
+           ::customer-id   customer-id}
+          active-subscription
+          <!
+          tap>)))
+  )
+
 (add-resolvers-or-mutations! [stripe-key
                               stripe-client
                               <get-customers-for-email-fn
@@ -170,4 +236,5 @@
                               products
                               prices
                               product
-                              price])
+                              price
+                              subscriptions])
