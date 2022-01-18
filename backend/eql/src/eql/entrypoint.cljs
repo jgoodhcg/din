@@ -27,12 +27,12 @@
   (try
     (log-debug "In try")
     (log-debug (p/map-of event))
-    (let [sub            (-> event (j/get-in [:requestContext :authorizer :jwt :claims :sub]))
-          email          (-> event (j/get-in [:requestContext :authorizer :jwt :claims :email]))
-          r              (t/reader :json)
-          w              (t/writer :json)
-          eql-req        (-> event (j/get :body) js/JSON.parse (j/get :transit-req) (->> (t/read r)))
-          validity       (atom {:valid true})]
+    (let [sub      (-> event (j/get-in [:requestContext :authorizer :jwt :claims :sub]))
+          email    (-> event (j/get-in [:requestContext :authorizer :jwt :claims :email]))
+          r        (t/reader :json)
+          w        (t/writer :json)
+          eql-req  (-> event (j/get :body) js/JSON.parse (j/get :transit-req) (->> (t/read r)))
+          validity (atom {:valid true})]
 
       (log-debug (p/map-of sub email eql-req))
       (->> eql-req
@@ -44,7 +44,7 @@
       (log-debug (str "validity: " @validity))
       (if (-> @validity :valid)
         (promesa/let [response (->> `[{(:>/res {:eql.cognito/sub ~sub
-                                                :eql.cognito/email ~email}) ~eql-req}]
+                                                :user/email      ~email}) ~eql-req}]
                                     (p.a.eql/process index))
                       result (get response :>/res)]
           (log-debug (p/map-of response result))
@@ -79,7 +79,7 @@
 
   ;; This is useful for testing "private" resolvers "eql.*"
   (promesa/let [req   [{'(:>/req {:eql.cognito/sub "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"
-                                  :eql.cognito/email "jgoodhcg+bbtest1@gmail.com"})
+                                  :user/email "jgoodhcg+bbtest1@gmail.com"})
                         [:eql.stripe.resolvers/stripe-id]}]
                 res   (->> req (p.a.eql/process index))]
     (tap> res))

@@ -56,7 +56,7 @@
            (js->clj :keywordize-keys true))))})
 
 (pco/defresolver stripe-customer
-  [{email                    :eql.cognito/email
+  [{email                    :user/email
     sub                      :eql.cognito/sub
     <get-customers-for-email ::<get-customers-for-email-fn
     <create-customer         ::<create-customer-fn}]
@@ -79,8 +79,8 @@
 
 (comment
   (let [stripe (stripe-construct (get-envvar :STRIPE_KEY))
-        params (-> {:eql.cognito/sub              "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"
-                    :eql.cognito/email            "jgoodhcg+bbtest1@gmail.com"}
+        params (-> {:eql.cognito/sub "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"
+                    :user/email      "jgoodhcg+bbtest1@gmail.com"}
                    (merge (<get-customers-for-email-fn {::stripe-client stripe}))
                    (merge (<create-customer-fn {::stripe-client stripe})))]
     (go
