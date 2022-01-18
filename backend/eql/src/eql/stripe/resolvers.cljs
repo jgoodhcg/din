@@ -16,11 +16,13 @@
 
 (defn stripe-customer-xform
   [stripe-customer]
-  (let [sub (-> stripe-customer :metadata :sub)]
+  (let [sub (-> stripe-customer :metadata :sub)
+        free-pass (-> stripe-customer :metadata :free_pass)]
     (-> stripe-customer
-        (merge {:eql.cognito/sub sub})
+        (merge {:eql.cognito/sub sub
+                :stripe/free-pass free-pass})
         (rename-keys {:email :user/email :id ::stripe-id})
-        (select-keys [:user/email :eql.cognito/sub ::stripe-id]))))
+        (select-keys [:user/email :eql.cognito/sub ::stripe-id :stripe/free-pass]))))
 
 (def stripe-key (pbir/constantly-resolver ::stripe-key (get-envvar :STRIPE_KEY)))
 
@@ -53,12 +55,12 @@
            <p!
            (js->clj :keywordize-keys true))))})
 
-(pco/defresolver stripe-id
+(pco/defresolver stripe-customer
   [{email                    :eql.cognito/email
     sub                      :eql.cognito/sub
     <get-customers-for-email ::<get-customers-for-email-fn
     <create-customer         ::<create-customer-fn}]
-  {::pco/output [::stripe-id]}
+  {::pco/output [::stripe-id :user/email :stripe/free-pass]}
   (go
     (let [first-customer-batch (<! (<get-customers-for-email {:email email :limit 100}))]
       (<! (go-loop [customer-batch first-customer-batch]
@@ -74,6 +76,19 @@
                                {:email          email
                                 :limit          100
                                 :starting_after (-> customer-batch last :id)})))))))))))
+
+(comment
+  (let [stripe (stripe-construct (get-envvar :STRIPE_KEY))
+        params (-> {:eql.cognito/sub              "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"
+                    :eql.cognito/email            "jgoodhcg+bbtest1@gmail.com"}
+                   (merge (<get-customers-for-email-fn {::stripe-client stripe}))
+                   (merge (<create-customer-fn {::stripe-client stripe})))]
+    (go
+      (-> params
+        stripe-customer
+        <!
+        tap>)))
+  )
 
 (pco/defresolver products
   [{stripe ::stripe-client}]
@@ -107,7 +122,8 @@
       (-> {::stripe-client stripe-client}
           prices ;; swap out products
           <!
-          tap>))))
+          tap>)))
+  )
 
 (pco/defresolver product
   [{stripe     ::stripe-client
@@ -150,7 +166,7 @@
                               stripe-client
                               <get-customers-for-email-fn
                               <create-customer-fn
-                              stripe-id
+                              stripe-customer
                               products
                               prices
                               product
