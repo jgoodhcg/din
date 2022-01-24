@@ -78,3 +78,4 @@ jobs:
           role: arn:aws:iam::963585794345:role/service-role/din-eql-role-4kitc0ij
           runtime: nodejs14.x
           description: "aws:states:opt-out"
+          environment: STRIPE_KEY=${{ secrets.STRIPE_TEST_KEY }}, STRIPE_CLIENT_KEY=${{ secrets.STRIPE_TEST_CLIENT_KEY }}
