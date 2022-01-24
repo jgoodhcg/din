@@ -24,6 +24,12 @@
         (rename-keys {:email :user/email :id ::customer-id})
         (select-keys [:user/email :eql.cognito/sub ::customer-id :stripe/free-pass]))))
 
+(defn stripe-obj-xform
+  [stripe-obj kmap]
+  (-> stripe-obj
+      (rename-keys kmap)
+      (select-keys (vals kmap))))
+
 (def stripe-key (pbir/constantly-resolver ::stripe-key (get-envvar :STRIPE_KEY)))
 
 (def stripe-client (pbir/single-attr-resolver ::stripe-key ::stripe-client #(stripe-construct %)))
@@ -104,8 +110,7 @@
          ((fn [{:keys [has_more data]}]
             (when has_more (throw "We have more than 100 products, time to write a loop!"))
             {::products (->> data
-                             (mapv #(rename-keys % {:id ::product-id}))
-                             (mapv #(select-keys % [::product-id])))})))))
+                             (mapv #(stripe-obj-xform % {:id ::product-id})))})))))
 
 (pco/defresolver prices
   [{stripe     ::stripe-client}]
@@ -119,8 +124,7 @@
          ((fn [{:keys [has_more data]}]
             (when has_more (throw "We have more than 100 products, time to write a loop!"))
             {::prices (->> data
-                           (mapv #(rename-keys % {:id ::price-id :product ::product-id}))
-                           (mapv #(select-keys % [::price-id ::product-id])))})))))
+                           (mapv #(stripe-obj-xform % {:id ::price-id :product ::product-id})))})))))
 
 (comment
   (let [stripe-client (stripe-construct (get-envvar :STRIPE_KEY))]
@@ -141,8 +145,7 @@
         (j/call :retrieve product-id)
         <p!
         (js->clj :keywordize-keys true)
-        (rename-keys {:id ::product-id :name ::product-name})
-        (select-keys [::product-id ::product-name]))))
+        (stripe-obj-xform {:id ::product-id :name ::product-name}))))
 
 (pco/defresolver price
   [{stripe     ::stripe-client
@@ -154,8 +157,7 @@
         (j/call :retrieve price-id)
         <p!
         (js->clj :keywordize-keys true)
-        (rename-keys {:id ::price-id :product ::product-id :unit_amount ::unit-amount})
-        (select-keys [::price-id ::product-id ::unit-amount]))))
+        (stripe-obj-xform {:id ::price-id :product ::product-id :unit_amount ::unit-amount}))))
 
 (comment
   (let [stripe-client (stripe-construct (get-envvar :STRIPE_KEY))
@@ -184,8 +186,7 @@
          ((fn [{:keys [has_more data]}]
             (when has_more (throw "A Customer has been found with more than 100 subscriptions, time to write a loop!"))
             {::subscriptions (->> data
-                                  (mapv #(rename-keys % {:id ::subscription-id}))
-                                  (mapv #(select-keys % [::subscription-id])))})))))
+                                  (mapv #(stripe-obj-xform % {:id ::subscription-id})))})))))
 
 (comment
   (let [stripe-client (stripe-construct (get-envvar :STRIPE_KEY))
@@ -226,6 +227,56 @@
           active-subscription
           <!
           tap>)))
+  )
+
+(pco/defresolver <get-setup-intents-fn
+  [{stripe ::stripe-client}]
+  {::<get-setup-intents-fn
+   (fn [{:keys [customer-id limit starting-after]}]
+     (go
+       (-> stripe
+           (j/get :setupIntents)
+           (j/call :list (cond-> {:customer customer-id}
+                           (some? limit)
+                           (merge {:limit limit})
+                           (some? starting-after)
+                           (merge {:starting_after starting-after})
+                           true clj->js))
+           <p!
+           (js->clj :keywordize-keys true))))})
+
+(pco/defresolver setup-intents
+  [{<get-setup-intents-fn ::<get-setup-intents-fn
+    customer-id           ::customer-id}]
+  {::pco/output [{::setup-intents [::setup-intent-id ::setup-intent-status ::customer-id]}]}
+  (go
+    (let [first-si-batch (<! (<get-setup-intents-fn {:customer-id customer-id :limit 100}))]
+      (<! (go-loop [this-batch first-si-batch
+                    setup-intents (-> first-si-batch :data vec)]
+            (if (or (-> this-batch :has_more not)
+                    (empty? setup-intents))
+              {::setup-intents (->> setup-intents
+                                    (mapv #(stripe-obj-xform % {:id            ::setup-intent-id
+                                                                :status        ::setup-intent-status
+                                                                :client_secret :stripe/setup-intent-client-secret
+                                                                :customer      ::customer-id})))}
+              (recur (<! (<get-setup-intents-fn
+                          {:customer-id    customer-id
+                           :limit          100
+                           :starting_after (-> this-batch last :id)}))
+                         setup-intents)))))))
+
+(comment
+  (let [stripe      (stripe-construct (get-envvar :STRIPE_KEY))
+        ;; customer-id "cus_KvZTT4PMdlahLM"
+        customer-id "cus_KzHJ9KPtx7xEqJ"]
+    (go
+      (-> {::customer-id customer-id}
+          (merge (<get-setup-intents-fn {::stripe-client stripe}))
+          setup-intents
+          <!
+          tap>))
+    )
   )
 
 (add-resolvers-or-mutations! [stripe-key

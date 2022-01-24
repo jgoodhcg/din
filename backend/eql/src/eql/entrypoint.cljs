@@ -20,8 +20,8 @@
 
    [potpuri.core :as p]))
 
-(def index (-> (pci/register @items)
-               (p.plugin/register pbip/mutation-resolve-params)))
+(defonce index (-> (pci/register @items)
+                   (p.plugin/register pbip/mutation-resolve-params)))
 
 (defn handler [event context callback]
   (try

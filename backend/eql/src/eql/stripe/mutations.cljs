@@ -12,28 +12,29 @@
 
    [common.misc :refer [log-debug log-error error-msg get-envvar]]
    [eql.registry :refer [add-resolvers-or-mutations!]]
+   [eql.stripe.resolvers :refer [stripe-obj-xform]]
    ))
 
 (pco/defmutation create-subscription
   [{stripe      :eql.stripe.resolvers/stripe-client
-    stripe-id   :eql.stripe.resolvers/stripe-id
+    customer-id   :eql.stripe.resolvers/customer-id
     price-id    :stripe/price-id}]
   {::pco/output [:eql.stripe.resolvers/subscription-id]}
   (go
     (-> stripe
         (j/get :subscriptions)
-        (j/call :create (j/lit {:customer stripe-id :items [{:price price-id}]}))
+        (j/call :create (j/lit {:customer customer-id :items [{:price price-id}]}))
         <p!
         (js->clj :keywordize-keys true)
-        (rename-keys {:id :eql.stripe.resolvers/subscription-id}))))
+        (stripe-obj-xform {:id :eql.stripe.resolvers/subscription-id}))))
 
 (comment
   (let [stripe-client (stripe-construct (get-envvar :STRIPE_KEY))
-        stripe-id    "cus_KvZTT4PMdlahLM"
+        customer-id    "cus_KvZTT4PMdlahLM"
         price-id      "price_1KGNOkBAaAf4dYG6cMdtieqH"]
     (go
       (-> {:eql.stripe.resolvers/stripe-client stripe-client
-           :eql.stripe.resolvers/stripe-id stripe-id
+           :eql.stripe.resolvers/customer-id customer-id
            :stripe/price-id price-id}
           create-subscription
           <!
@@ -42,24 +43,25 @@
 
 (pco/defmutation create-setup-intent
   [{stripe      :eql.stripe.resolvers/stripe-client
-    stripe-id   :eql.stripe.resolvers/stripe-id}]
+    customer-id :eql.stripe.resolvers/customer-id}]
   {::pco/output [:eql.stripe.resolvers/setup-intent-id
                  :stripe/setup-intent-client-secret]}
   (go
     (-> stripe
         (j/get :setupIntents)
-        (j/call :create (j/lit {:customer stripe-id :payment_method_types ["card"]}))
+        (j/call :create (j/lit {:customer customer-id :payment_method_types ["card"]}))
         <p!
         (js->clj :keywordize-keys true)
-        (rename-keys {:id :eql.stripe.resolvers/setup-intent-id
-                      :client_secret :stripe/setup-intent-client-secret}))))
+        (stripe-obj-xform {:id            :eql.stripe.resolvers/setup-intent-id
+                           :client_secret :stripe/setup-intent-client-secret}))))
 
 (comment
   (let [stripe-client (stripe-construct (get-envvar :STRIPE_KEY))
-        stripe-id    "cus_KvZTT4PMdlahLM"]
+        ;; customer-id    "cus_KvZTT4PMdlahLM"
+        customer-id   "cus_KzHJ9KPtx7xEqJ"]
     (go
       (-> {:eql.stripe.resolvers/stripe-client stripe-client
-           :eql.stripe.resolvers/stripe-id stripe-id}
+           :eql.stripe.resolvers/customer-id   customer-id}
           create-setup-intent
           <!
           tap>)))
