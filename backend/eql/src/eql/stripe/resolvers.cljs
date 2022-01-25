@@ -32,6 +32,8 @@
 
 (def stripe-key (pbir/constantly-resolver ::stripe-key (get-envvar :STRIPE_KEY)))
 
+(def stripe-p-key (pbir/constantly-resolver :stripe/publishable-key (get-envvar :STRIPE_P_KEY)))
+
 (def stripe-client (pbir/single-attr-resolver ::stripe-key ::stripe-client #(stripe-construct %)))
 
 (pco/defresolver <get-customers-for-email-fn
@@ -280,6 +282,7 @@
   )
 
 (add-resolvers-or-mutations! [stripe-key
+                              stripe-p-key
                               stripe-client
                               <get-customers-for-email-fn
                               <create-customer-fn
