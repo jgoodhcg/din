@@ -63,7 +63,7 @@
            <p!
            (js->clj :keywordize-keys true))))})
 
-(pco/defresolver stripe-customer
+(pco/defresolver stripe-customer!
   [{email                    :user/email
     sub                      :eql.cognito/sub
     <get-customers-for-email ::<get-customers-for-email-fn
@@ -286,7 +286,7 @@
                               stripe-client
                               <get-customers-for-email-fn
                               <create-customer-fn
-                              stripe-customer
+                              stripe-customer!
                               products
                               prices
                               product

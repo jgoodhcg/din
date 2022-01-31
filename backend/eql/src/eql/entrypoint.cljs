@@ -87,7 +87,7 @@
 
 (let [w   (t/writer :json)
       r   (t/reader :json)
-      req []]
+      req [:stripe/publishable-key]]
   (->> req (t/write w) tap>)
  ;; (->> "[]" (t/read r))
   )

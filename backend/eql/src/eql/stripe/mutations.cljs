@@ -67,5 +67,43 @@
           tap>)))
   )
 
+(pco/defmutation create-checkout-session
+  [{success-url :stripe.checkout/success-url
+    cancel-url  :stripe.checkout/cancel-url
+    price-id    :stripe/price-id
+    stripe      :eql.stripe.resolvers/stripe-client
+    customer-id :eql.stripe.resolvers/customer-id}]
+  {::pco/output [:stripe.checkout/checkout-url]}
+  (go
+    (-> stripe
+        (j/get :checkout)
+        (j/get :sessions)
+        (j/call :create (j/lit {:mode        "subscription"
+                                :customer    customer-id
+                                :line_items  [{:price    price-id
+                                               :quantity 1}]
+                                :success_url success-url
+                                :cancel_url  cancel-url}))
+        <p!
+        (#(hash-map :stripe.checkout/checkout-url (j/get % :url))))))
+
+(comment
+  (let [stripe-client (stripe-construct (get-envvar :STRIPE_KEY))
+        ;; customer-id    "cus_KvZTT4PMdlahLM"
+        customer-id   "cus_KzHJ9KPtx7xEqJ"
+        price-id      "price_1KGNOkBAaAf4dYG6cMdtieqH"]
+    (go
+      (-> {:stripe/price-id                    price-id
+           ;; :stripe.checkout/success-url        "exp://127.0.0.1:19000/success"
+           ;; :stripe.checkout/cancel-url         "exp://127.0.0.1:19000/cancel"
+           :stripe.checkout/success-url        "https://127.0.0.1:19000/success"
+           :stripe.checkout/cancel-url         "https://127.0.0.1:19000/cancel"
+           :eql.stripe.resolvers/stripe-client stripe-client
+           :eql.stripe.resolvers/customer-id   customer-id}
+          create-checkout-session
+          <!
+          tap>)))
+  )
+
 (add-resolvers-or-mutations! [create-subscription
                               create-setup-intent])
