@@ -144,7 +144,7 @@
           "https://rf8gjfxxbd.execute-api.us-east-2.amazonaws.com/default/din-eql"
           (http/post {:with-credentials? false
                       :headers           {"Authorization" (str "Bearer " @jwt)}
-                      :json-params       {:transit-req "[]"}})
+                      :json-params       {:transit-req "[\"~:stripe/publishable-key\"]"}})
           <!
           ;; :body
           ;; (#(-> js/JSON (j/call :parse %)))

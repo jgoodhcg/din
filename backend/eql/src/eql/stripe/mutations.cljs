@@ -15,6 +15,7 @@
    [eql.stripe.resolvers :refer [stripe-obj-xform]]
    ))
 
+;; 2022-02-03 Justin - Unused
 (pco/defmutation create-subscription
   [{stripe      :eql.stripe.resolvers/stripe-client
     customer-id   :eql.stripe.resolvers/customer-id
@@ -41,6 +42,7 @@
           tap>)))
   )
 
+;; 2022-02-03 Justin - Unused
 (pco/defmutation create-setup-intent
   [{stripe      :eql.stripe.resolvers/stripe-client
     customer-id :eql.stripe.resolvers/customer-id}]
@@ -94,6 +96,7 @@
         price-id      "price_1KGNOkBAaAf4dYG6cMdtieqH"]
     (go
       (-> {:stripe/price-id                    price-id
+           ;; custom schemes don't work :(
            ;; :stripe.checkout/success-url        "exp://127.0.0.1:19000/success"
            ;; :stripe.checkout/cancel-url         "exp://127.0.0.1:19000/cancel"
            :stripe.checkout/success-url        "https://127.0.0.1:19000/success"

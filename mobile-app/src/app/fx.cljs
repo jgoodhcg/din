@@ -13,6 +13,7 @@
    [cljs.core.async.interop :refer [<p!]]
    [cljs-http.client :as http]
    [clojure.edn :as edn]
+   [cognitect.transit :as transit]
    [tick.alpha.api :as t]
 
    [app.helpers :refer [>evt >evt-sync screen-key-name-mapping millis->str]]))
@@ -250,4 +251,11 @@
         ;; (j/call :playAsync)
         <p!
         tap>))
+
+  (let [w   (transit/writer :json)
+        r   (transit/reader :json)
+        req [:stripe/publishable-key]]
+  (->> req (transit/write w) tap>)
+  ;; (->> "[]" (t/read r))
+  )
   )

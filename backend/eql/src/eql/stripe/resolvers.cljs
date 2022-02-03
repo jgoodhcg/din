@@ -34,7 +34,8 @@
 
 (def stripe-p-key (pbir/constantly-resolver :stripe/publishable-key (get-envvar :STRIPE_P_KEY)))
 
-(def stripe-client (pbir/single-attr-resolver ::stripe-key ::stripe-client #(stripe-construct %)))
+;; (def stripe-client (pbir/single-attr-resolver ::stripe-key ::stripe-client #(stripe-construct %)))
+(def stripe-client (pbir/constantly-resolver ::stripe-client (stripe-construct (get-envvar :STRIPE_KEY))))
 
 (pco/defresolver <get-customers-for-email-fn
   [{stripe ::stripe-client}]
@@ -68,7 +69,7 @@
     sub                      :eql.cognito/sub
     <get-customers-for-email ::<get-customers-for-email-fn
     <create-customer         ::<create-customer-fn}]
-  {::pco/output [::customer-id :user/email :stripe/free-pass]}
+  {::pco/output [::customer-id :stripe/free-pass]}
   (go
     (let [first-customer-batch (<! (<get-customers-for-email {:email email :limit 100}))]
       (<! (go-loop [customer-batch first-customer-batch]
@@ -101,8 +102,13 @@
   )
 
 (pco/defresolver products
-  [{stripe ::stripe-client}]
-  {::pco/output [{::products [::product-id]}]}
+  [{stripe ::stripe-client
+    customer-id ::customer-id}]
+  {::pco/output [{::products
+                  [::product-id
+                   :stripe.product/description
+                   :stripe.product/name
+                   :stripe.product/images]}]}
   (go
      (-> stripe
          (j/get :products)
@@ -112,27 +118,36 @@
          ((fn [{:keys [has_more data]}]
             (when has_more (throw "We have more than 100 products, time to write a loop!"))
             {::products (->> data
-                             (mapv #(stripe-obj-xform % {:id ::product-id})))})))))
+                             (mapv #(stripe-obj-xform % {:id          ::product-id
+                                                         :name        :stripe.product/name
+                                                         :description :stripe.product/description
+                                                         :images      :stripe.product/images})))})))))
 
 (pco/defresolver prices
-  [{stripe     ::stripe-client}]
-  {::pco/output [{::prices [::price-id ::product-id]}]}
+  [{stripe ::stripe-client
+    customer-id ::customer-id}]
+  {::pco/output [{:stripe/prices [:stripe.price/id
+                                  :stripe.price/unit-amount
+                                  ::product-id]}]}
   (go
-     (-> stripe
-         (j/get :prices)
-         (j/call :list (j/lit {:limit 100}))
-         <p!
-         (js->clj :keywordize-keys true)
-         ((fn [{:keys [has_more data]}]
-            (when has_more (throw "We have more than 100 products, time to write a loop!"))
-            {::prices (->> data
-                           (mapv #(stripe-obj-xform % {:id ::price-id :product ::product-id})))})))))
+    (-> stripe
+        (j/get :prices)
+        (j/call :list (j/lit {:limit 100}))
+        <p!
+        (js->clj :keywordize-keys true)
+        ((fn [{:keys [has_more data]}]
+           (when has_more (throw "We have more than 100 prices, time to write a loop!"))
+           {:stripe/prices (->> data
+                                (mapv #(stripe-obj-xform % {:id          :stripe.price/id
+                                                            :unit_amount :stripe.price/unit-amount
+                                                            :product     ::product-id})))})))))
 
 (comment
   (let [stripe-client (stripe-construct (get-envvar :STRIPE_KEY))]
     (go
       (-> {::stripe-client stripe-client}
           prices ;; swap out products
+          ;; products
           <!
           tap>)))
   )
@@ -140,48 +155,56 @@
 (pco/defresolver product
   [{stripe     ::stripe-client
     product-id ::product-id}]
-  {::pco/output [::product-name ::product-id]}
+  {::pco/output [::product-id
+                 :stripe.product/description
+                 :stripe.product/name
+                 :stripe.product/images]}
   (go
     (-> stripe
         (j/get :products)
         (j/call :retrieve product-id)
         <p!
         (js->clj :keywordize-keys true)
-        (stripe-obj-xform {:id ::product-id :name ::product-name}))))
+        (stripe-obj-xform {:id          ::product-id
+                           :name        :stripe.product/name
+                           :description :stripe.product/description
+                           :images      :stripe.product/images}))))
 
 (pco/defresolver price
-  [{stripe     ::stripe-client
-    price-id ::price-id}]
-  {::pco/output [::price-id ::product-id ::unit-mount]}
+  [{stripe   ::stripe-client
+    price-id :stripe.price/id}]
+  {::pco/output [:stripe.price/id
+                 :stripe.price/unit-amount
+                 ::product-id]}
   (go
     (-> stripe
         (j/get :prices)
         (j/call :retrieve price-id)
         <p!
         (js->clj :keywordize-keys true)
-        (stripe-obj-xform {:id ::price-id :product ::product-id :unit_amount ::unit-amount}))))
+        (stripe-obj-xform {:id :stripe.price/id :product ::product-id :unit_amount :stripe.price/unit-amount}))))
 
 (comment
   (let [stripe-client (stripe-construct (get-envvar :STRIPE_KEY))
         ;; product-id    "prod_KwFuyzREssNGFu"
         price-id      "price_1KGNOkBAaAf4dYG6cMdtieqH"]
     (go
-      (-> {::stripe-client stripe-client
+      (-> {::stripe-client  stripe-client
            ;; ::product-id product-id
-           ::price-id price-id}
+           :stripe.price/id price-id}
           price ;; swap out product
           <!
           tap>)))
   )
 
 (pco/defresolver subscriptions
-  [{stripe    ::stripe-client
+  [{stripe      ::stripe-client
     customer-id ::customer-id}]
   {::pco/output [{::subscriptions [::subscription-id]}]}
   (go
      (-> stripe
          (j/get :subscriptions)
-         (j/call :list (j/lit {:limit 100
+         (j/call :list (j/lit {:limit    100
                                :customer customer-id}))
          <p!
          (js->clj :keywordize-keys true)
@@ -208,7 +231,7 @@
   (go
     {:stripe/has-active-subscription?
      (-> stripe
-         (j/get :subscriptions)
+         (j/get :subscriptions) ;; TODO utilize subscriptions resolver?
          (j/call :list (j/lit {:limit    100
                                :customer customer-id
                                :status   "active"}))

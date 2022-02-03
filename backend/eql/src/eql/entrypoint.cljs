@@ -9,16 +9,15 @@
    [com.wsscode.pathom3.connect.built-in.plugins :as pbip]
    [com.wsscode.pathom3.interface.async.eql :as p.a.eql]
    [com.wsscode.pathom3.plugin :as p.plugin]
+   [com.wsscode.pathom3.error :as p.error]
    [promesa.core :as promesa]
+   [potpuri.core :as p]
 
    [common.misc :refer [log-debug log-error error-msg]]
    [eql.registry :refer [items]]
-
    [eql.stripe.resolvers]
    [eql.stripe.mutations]
-
-
-   [potpuri.core :as p]))
+   ))
 
 (defonce index (-> (pci/register @items)
                    (p.plugin/register pbip/mutation-resolve-params)))
@@ -63,13 +62,17 @@
   ;; Test the full handler
   (let [w   (t/writer :json)
         r   (t/reader :json)
-        req []]
+        req [{:stripe/prices [:stripe.price/id
+                              :stripe.price/unit-amount
+                              :stripe.product/name
+                              :stripe.product/description
+                              :stripe.product/images]}]]
     (handler (-> {:body           (js/JSON.stringify (j/lit {:transit-req (t/write w req)}))
                   :requestContext {:authorizer
                                    {:jwt
-                                       {:claims
-                                        {:sub   "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"
-                                         :email "jgoodhcg+bbtest1@gmail.com"}}}}}
+                                    {:claims
+                                     {:sub   "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"
+                                      :email "jgoodhcg+bbtest1@gmail.com"}}}}}
                  clj->js)
              nil ;; context
             ;; #(-> %2 (j/get :body) (->> (t/read r)) tap>)
@@ -79,17 +82,17 @@
 
   ;; This is useful for testing "private" resolvers "eql.*"
   (promesa/let [req   [{'(:>/req {:eql.cognito/sub "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"
-                                  :user/email "jgoodhcg+bbtest1@gmail.com"})
-                        [:eql.stripe.resolvers/customer-id
-                         :stripe/publishable-key]}]
-                res   (->> req (p.a.eql/process index))]
+                                  :user/email      "jgoodhcg+bbtest1@gmail.com"})
+                        [:user/email
+                         :stripe/free-pass
+                         :eql.stripe.resolvers/subscriptions
+                         {:stripe/prices
+                          [:stripe.price/id
+                           :stripe.price/unit-amount
+                           :stripe.product/name
+                           :stripe.product/description
+                           :stripe.product/images]}
+                         ]}]
+                res   (->> req (p.a.eql/process (assoc index ::p.error/lenient-mode? true)))]
     (tap> res))
-
-(let [w   (t/writer :json)
-      r   (t/reader :json)
-      req [:stripe/publishable-key]]
-  (->> req (t/write w) tap>)
- ;; (->> "[]" (t/read r))
-  )
-
   )

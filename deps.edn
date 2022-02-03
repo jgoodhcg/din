@@ -17,7 +17,7 @@
          re-frame/re-frame                   {:mvn/version "1.1.1"}
          tick/tick                           {:mvn/version "0.4.27-alpha"}
          thheller/shadow-cljs                {:mvn/version "2.16.12"}
-         com.wsscode/pathom3                 {:mvn/version "2022.01.09-alpha"}
+         com.wsscode/pathom3                 {:mvn/version "2022.02.01-1-alpha"}
          funcool/promesa                     {:mvn/version "6.0.2"}
          com.wsscode/promesa-bridges         {:mvn/version "2021.01.20"}
          com.cognitect/transit-cljs          {:mvn/version "0.8.269"}}}
