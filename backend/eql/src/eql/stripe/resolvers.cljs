@@ -314,4 +314,5 @@
                               prices
                               product
                               price
-                              subscriptions])
+                              subscriptions
+                              active-subscription])
