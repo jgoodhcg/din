@@ -84,14 +84,19 @@
   (promesa/let [req   [{'(:>/req {:eql.cognito/sub "45c371ee-a4a5-4a2f-aa82-b3434a7371ad"
                                   :user/email      "jgoodhcg+bbtest1@gmail.com"})
                         [:user/email
-                         :stripe/free-pass
-                         :eql.stripe.resolvers/subscriptions
-                         {:stripe/prices
-                          [:stripe.price/id
-                           :stripe.price/unit-amount
-                           :stripe.product/name
-                           :stripe.product/description
-                           :stripe.product/images]}
+                         {:stripe/active-subscription
+                          [:stripe.subscription/created
+                           :stripe.subscription/current-period-end
+                           :stripe.subscription/current-period-start
+                           :stripe.subscription/cancel-at-period-end
+                           :stripe.price/id]}
+                         ;; :eql.stripe.resolvers/subscriptions
+                         ;; {:stripe/prices
+                         ;;  [:stripe.price/id
+                         ;;   :stripe.price/unit-amount
+                         ;;   :stripe.product/name
+                         ;;   :stripe.product/description
+                         ;;   :stripe.product/images]}
                          ]}]
                 res   (->> req (p.a.eql/process (assoc index ::p.error/lenient-mode? true)))]
     (tap> res))

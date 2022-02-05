@@ -200,7 +200,14 @@
 (pco/defresolver subscriptions
   [{stripe      ::stripe-client
     customer-id ::customer-id}]
-  {::pco/output [{::subscriptions [::subscription-id]}]}
+  {::pco/output [{::subscriptions
+                  [::subscription-id
+                   :stripe.subscription/created
+                   :stripe.subscription/status
+                   :stripe.subscription/cancel-at-period-end
+                   :stripe.subscription/current-period-end
+                   :stripe.subscription/current-period-start
+                   :stripe.price/id]}]}
   (go
      (-> stripe
          (j/get :subscriptions)
@@ -210,8 +217,19 @@
          (js->clj :keywordize-keys true)
          ((fn [{:keys [has_more data]}]
             (when has_more (throw "A Customer has been found with more than 100 subscriptions, time to write a loop!"))
-            {::subscriptions (->> data
-                                  (mapv #(stripe-obj-xform % {:id ::subscription-id})))})))))
+            {::subscriptions
+             (->> data
+                  ;; assumes there is only one price-id per subscription
+                  (mapv #(do (tap> %)
+                             (merge % {:stripe.price/id
+                                       (-> % :items :data first :price :id)})))
+                  (mapv #(stripe-obj-xform % {:id                   ::subscription-id
+                                              :created              :stripe.subscription/created
+                                              :status               :stripe.subscription/status
+                                              :cancel_at_period_end :stripe.subscription/cancel-at-period-end
+                                              :current_period_end   :stripe.subscription/current-period-end
+                                              :current_period_start :stripe.subscription/current-period-start
+                                              :stripe.price/id      :stripe.price/id})))})))))
 
 (comment
   (let [stripe-client (stripe-construct (get-envvar :STRIPE_KEY))
@@ -225,34 +243,19 @@
   )
 
 (pco/defresolver active-subscription
-  [{stripe      ::stripe-client
-    customer-id ::customer-id}]
-  {::pco/output [:stripe/has-active-subscription?]}
-  (go
-    {:stripe/has-active-subscription?
-     (-> stripe
-         (j/get :subscriptions) ;; TODO utilize subscriptions resolver?
-         (j/call :list (j/lit {:limit    100
-                               :customer customer-id
-                               :status   "active"}))
-         <p!
-         (js->clj :keywordize-keys true)
-         ((fn [{:keys [has_more data]}]
-            (when has_more (throw "A Customer has been found with more than 100 subscriptions, time to write a loop!"))
-            data))
-         (#(-> % count (> 0))))}))
+  [{subs ::subscriptions}]
+  {::pco/output [{:stripe/active-subscription
+                  [:stripe.subscription/created
+                   :stripe.subscription/current-period-end
+                   :stripe.subscription/current-period-start
+                   :stripe.subscription/cancel-at-period-end
+                   :stripe.price/id]}]}
 
-(comment
-  (let [stripe-client (stripe-construct (get-envvar :STRIPE_KEY))
-        ;; customer-id     "cus_KvZTT4PMdlahLM"
-        customer-id   "cus_KzHJ9KPtx7xEqJ"]
-    (go
-      (-> {::stripe-client stripe-client
-           ::customer-id   customer-id}
-          active-subscription
-          <!
-          tap>)))
-  )
+  ;; Assumes there is only one active subscription
+  {:stripe/active-subscription
+   (->> subs
+        (filter #(= "active" (:stripe.subscription/status %)))
+        first)})
 
 (pco/defresolver <get-setup-intents-fn
   [{stripe ::stripe-client}]
