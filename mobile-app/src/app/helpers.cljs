@@ -17,10 +17,11 @@
       tailwind-rn
       (js->clj :keywordize-keys true)))
 
-(def screen-key-name-mapping #:screen {:feed-item "Feed Item"
-                                       :feed      "Feed"
-                                       :feeds     "Feeds"
-                                       :payment   "Payment"})
+(def screen-key-name-mapping #:screen {:feed-item    "Feed Item"
+                                       :feed         "Feed"
+                                       :feeds        "Feeds"
+                                       :payment      "Payment"
+                                       :subscription "Subscription"})
 
 (defn screen-key->name [k] (get screen-key-name-mapping k))
 (defn screen-name->key [n] (-> screen-key-name-mapping map-invert (get n)))

@@ -189,6 +189,14 @@
   (->> db (select-one! [:menus :menu/playback-rate :playback-rate/visible])))
 (reg-sub :sub/playback-rate-menu-visible playback-rate-menu-visible)
 
+(defn active-subscription-price-id [db _]
+  (->> db (select-one! [:stripe :stripe/active-subscription :stripe.price/id])))
+(reg-sub :sub/active-subscription-price-id active-subscription-price-id)
+
+(defn possible-subscriptions [db _]
+  (->> db (select-one! [:stripe :stripe/prices])))
+(reg-sub :sub/possible-subscriptions possible-subscriptions)
+
 (comment
   (->> @re-frame.db/app-db
        (select-one! [:menus :menu/playback-rate :playback-rate/visible]))

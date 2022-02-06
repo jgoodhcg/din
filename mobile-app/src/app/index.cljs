@@ -26,7 +26,7 @@
    [app.screen.feeds :refer [root] :rename {root feeds-screen}]
    [app.screen.feed :refer [root] :rename {root feed-screen}]
    [app.screen.feed-item :refer [root] :rename {root feed-item-screen}]
-   [app.screen.payment :refer [root] :rename {root payment-screen}]))
+   [app.screen.subscription :refer [root] :rename {root subscription-screen}]))
 
 (def api-endpoint "https://yabrbam9si.execute-api.us-east-2.amazonaws.com/default/din-page-titles")
 
@@ -65,7 +65,7 @@
                             (swap! !route-name-ref merge {:current current-route-name})))}
 
       [:> (navigator) {:header-mode        "none"
-                       :initial-route-name  (:screen/payment screen-key-name-mapping)
+                       :initial-route-name  (:screen/subscription screen-key-name-mapping)
                        ;; (screen-key->name last-screen) ;; use this for editing a screen quickly without re-navigating on hot reload
                        }
        (screen {:name      (:screen/feeds screen-key-name-mapping)
@@ -74,8 +74,8 @@
                 :component (paper/withTheme feed-screen)})
        (screen {:name      (:screen/feed-item screen-key-name-mapping)
                 :component (paper/withTheme feed-item-screen)})
-       (screen {:name      (:screen/payment screen-key-name-mapping)
-                :component (paper/withTheme payment-screen)})]]]))
+       (screen {:name      (:screen/subscription screen-key-name-mapping)
+                :component (paper/withTheme subscription-screen)})]]]))
 
 (defn start
   {:dev/after-load true}
