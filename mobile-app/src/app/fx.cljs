@@ -1,5 +1,6 @@
 (ns app.fx
   (:require
+   ["aws-amplify" :default Amplify :refer [Auth Hub]]
    ["react-native-rss-parser" :as rss]
    ["react-native" :as rn]
    ["expo-av" :as av]
@@ -16,7 +17,8 @@
    [cognitect.transit :as transit]
    [tick.alpha.api :as t]
 
-   [app.helpers :refer [>evt >evt-sync screen-key-name-mapping millis->str]]))
+   [app.helpers :refer [>evt >evt-sync screen-key-name-mapping millis->str]]
+   [potpuri.core :as p]))
 
 (def dd (-> fs (j/get :documentDirectory)))
 
@@ -110,7 +112,8 @@
                          (-> rn/Alert (j/call :alert "App-db did not exist"))
                          (println "load fx: file does NOT exist -------------------------------")
                          (>evt [:event/set-version version])
-                         (>evt [:event/refresh-feeds]))
+                         (>evt [:event/refresh-feeds])
+                         (>evt [:event/init-for-logged-in-user]))
                        ;; file exists load db
                        (go
                          (try
@@ -243,6 +246,78 @@
                (j/call :setStatusAsync (j/lit {:rate % :shouldCorrectPitch true}))
                <p!)))
 
+(defn <load-stripe-data!
+  []
+  (go
+    (tap> {:location "<load-stripe-data!"
+           :msg      "loading stripe data"})
+    (let [w   (transit/writer :json)
+          r   (transit/reader :json)
+          jwt (-> Auth
+                  (j/call :currentSession)
+                  <p!
+                  (j/call :getIdToken)
+                  (j/get :jwtToken))
+          req [:user/email
+               :stripe/free-pass
+               {:stripe/active-subscription
+                [:stripe.subscription/created
+                 :stripe.subscription/current-period-end
+                 :stripe.subscription/current-period-start
+                 :stripe.subscription/cancel-at-period-end
+                 :stripe.price/id]}
+               {:stripe/prices
+                [:stripe.price/id
+                 :stripe.price/unit-amount
+                 :stripe.product/name
+                 :stripe.product/description
+                 :stripe.product/images]}
+               ]
+          res (-> "https://rf8gjfxxbd.execute-api.us-east-2.amazonaws.com/default/din-eql"
+                  (http/post {:with-credentials? false
+                              :headers           {"Authorization" (str "Bearer " jwt)}
+                              :json-params       {:transit-req (->> req (transit/write w))}})
+                  <!
+                  :body
+                  (->> (transit/read r)))]
+      (>evt [:event/set-stripe-data res]))))
+
+(reg-fx :effect/set-auth-listener
+        (fn []
+          (println "auth listener fx ----------------------------------------------------")
+          (tap> {:location "auth listener fx"})
+          (-> Hub (j/call :listen "auth" (fn [msg]
+                                           (let [event (-> msg (j/get-in [:payload :event]))]
+                                             (when (= "signIn" event)
+                                               (tap> {:location :effect/set-auth-listener
+                                                      :msg      "Signed in, getting stripe data"})
+                                               (go (<! (<load-stripe-data!))))
+                                             (when (= "signOut" event)
+                                               (tap> {:location :effect/set-auth-listener
+                                                      :msg      "Signed out, removing stripe data"})
+                                               (>evt [:event/set-stripe-data nil]))))))))
+
+(comment
+  (-> @re-frame.db/app-db :stripe tap>)
+  (-> Auth (j/call :signOut))
+  )
+
+(reg-fx :effect/init-for-logged-in-user
+        (fn []
+          (println "auth listener fx ----------------------------------------------------")
+          (tap> {:location :effect/init-for-logged-in-user})
+          (go
+            (let [is-logged-in (-> Auth
+                                   (j/call :currentUserInfo)
+                                   <p!
+                                   js->clj
+                                   some?)]
+
+              (when is-logged-in
+                (tap> {:location :effect/init-for-logged-in-user
+                       :msg      "Is logged in, fetching stripe data"})
+                (go (<! (<load-stripe-data!))))))))
+
 (comment
   (go
     (-> @playback-object
@@ -258,4 +333,19 @@
   (->> req (transit/write w) tap>)
   ;; (->> "[]" (t/read r))
   )
+
+(go
+  (-> Auth
+      (j/call :signOut)
+      <p!
+      js->clj
+      tap>))
+
+(go
+  (-> Auth
+      (j/call :currentUserInfo)
+      <p!
+      js->clj
+      (#(hash-map :x %))
+      tap>))
   )

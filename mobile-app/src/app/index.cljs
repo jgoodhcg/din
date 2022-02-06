@@ -84,13 +84,15 @@
     (r/as-element ;; [root]
       [(r/adapt-react-class
          (withAuthenticator
-           (r/reactify-component root) (clj->js {:signUpConfig {:hiddenDefaults ["phone_number"]}})))])))
+          (r/reactify-component root)
+          (clj->js {:signUpConfig {:hiddenDefaults ["phone_number"]}})))])))
 
 (defn init []
   (println "hellooooooooooo ----------------------------------------------------")
   (j/call Amplify :configure aws-config)
   (>evt-sync [:event/initialize-db])
   (>evt [:event/trigger-load-db])
+  (>evt [:event/set-auth-listener])
   (start))
 
 (comment
@@ -105,13 +107,6 @@
   (go (-> Auth
           (j/call :currentSession)
           <p!
-          (j/call :getAccessToken)
-          (j/get :jwtToken)
-          tap>))
-
-(go (-> Auth
-          (j/call :currentSession)
-          <p!
           (j/call :getIdToken)
           (j/get :jwtToken)
           tap>))
@@ -120,9 +115,9 @@
   (def jwt (atom nil))
 
   (go (-> Auth
+
           (j/call :currentSession)
           <p!
-          ;; (j/call :getAccessToken)
           (j/call :getIdToken)
           (j/get :jwtToken)
           (->> (reset! jwt))))
@@ -140,8 +135,7 @@
           ;; :result
           tap>))
 
-  (go (-> ;; "https://rou216ssnh.execute-api.us-east-2.amazonaws.com/default/din-eql"
-          "https://rf8gjfxxbd.execute-api.us-east-2.amazonaws.com/default/din-eql"
+  (go (-> "https://rf8gjfxxbd.execute-api.us-east-2.amazonaws.com/default/din-eql"
           (http/post {:with-credentials? false
                       :headers           {"Authorization" (str "Bearer " @jwt)}
                       :json-params       {:transit-req "[\"~:stripe/publishable-key\"]"}})

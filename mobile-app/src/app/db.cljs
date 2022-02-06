@@ -46,9 +46,9 @@
 (s/def ::feeds (s/and map? (s/every-kv uuid? ::feed)))
 
 (def app-db-spec
-  (ds/spec {:spec {:settings {:theme (s/spec #{:light :dark})}
-                   :version  string?
-                   :feeds    ::feeds
+  (ds/spec {:spec {:settings   {:theme (s/spec #{:light :dark})}
+                   :version    string?
+                   :feeds      ::feeds
                    ;; TODO justin 2021-05-17 Change all :*/visible to "visibility"
                    :modals     {:modal/feed-add    {:feed-add/visible boolean?}
                                 :modal/feed-remove {:feed-remove/id (ds/maybe uuid?)}}
@@ -61,6 +61,13 @@
                                                                                          :status/stopped}))
                                 :selected-feed/item-selected-note-id (ds/maybe uuid?)}
                    :roam-pages [string?]
+                   :stripe     (ds/maybe {:stripe/active-subscription {:stripe.price/id string?}
+                                          :stripe/free-pass           (ds/maybe string?)
+                                          :stripe/prices              [{:stripe.price/id          string?
+                                                                        :stripe.price/unit-amount integer?
+                                                                        :stripe.price/description (ds/maybe string?)
+                                                                        :stripe.product/images    [string?]
+                                                                        :stripe.product/name      string?}]})
                    :navigation {:navigation/last-screen (ds/maybe keyword?)}}
             :name ::app-db}))
 
@@ -107,4 +114,5 @@
                 :selected-feed/item-status           nil
                 :selected-feed/item-selected-note-id nil}
    :roam-pages []
-   :navigation {:navigation/last-screen nil}})
+   :navigation {:navigation/last-screen nil}
+   :stripe     nil})

@@ -123,7 +123,8 @@
 
     (merge {:db         (p/deep-merge default-app-db app-db) ;; merge default to handle accretion changes without blowing up spec check
             :dispatch-n [[:event/set-version version]
-                         [:event/refresh-feeds]]}
+                         [:event/refresh-feeds]
+                         [:event/init-for-logged-in-user]]}
            (when (and (some? id)
                       (some? item-id))
              {:effect/load-playback-object
@@ -396,6 +397,20 @@
   (->> cofx (setval [:db :feeds (sp/keypath feed-id) :feed/playback-rate] rate)
        (merge {:effect/set-playback-rate rate})))
 (reg-event-fx :event/set-playback-rate set-playback-rate)
+
+(defn set-auth-listener [cofx _]
+  (println "Setting auth listener ----------------------------")
+  (merge cofx {:effect/set-auth-listener true}))
+(reg-event-fx :event/set-auth-listener set-auth-listener)
+
+(defn init-for-logged-in-user [cofx _]
+  (println "Initializing for potential logged in user ----------------------------")
+  (merge cofx {:effect/init-for-logged-in-user true}))
+(reg-event-fx :event/init-for-logged-in-user init-for-logged-in-user)
+
+(defn set-stripe-data [db [_ stripe-data]]
+  (->> db (setval [:stripe] stripe-data)))
+(reg-event-db :event/set-stripe-data set-stripe-data)
 
 (comment
   (->> @re-frame.db/app-db
