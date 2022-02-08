@@ -64,7 +64,8 @@
 
     [:> g/RectButton {:on-press
                       #(>evt [:event/select-feed {:feed-id  id
-                                                  :navigate true}])}
+                                                  :navigate true}])
+                      }
      [:> rn/View
       [:> paper/Card {:key id}
        [:> paper/Card.Cover {:source      {:uri image-url}

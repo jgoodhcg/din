@@ -1,10 +1,11 @@
 (ns app.index
   (:require
    ["@react-navigation/native" :as nav]
-   ["@react-navigation/stack" :as rn-stack]
+   ["@react-navigation/native-stack" :as rn-stack]
    ["expo" :as ex]
    ["react" :as react]
    ["react-native" :as rn]
+   ["react-native-gesture-handler" :as g]
    ["react-native-paper" :as paper]
    ["tailwind-rn" :default tailwind-rn]
    ["../aws-exports" :default aws-config]
@@ -30,11 +31,16 @@
 
 (def api-endpoint "https://yabrbam9si.execute-api.us-east-2.amazonaws.com/default/din-page-titles")
 
-(def stack (rn-stack/createStackNavigator))
+(def stack (rn-stack/createNativeStackNavigator))
 
 (defn navigator [] (-> stack (j/get :Navigator)))
 
 (defn screen [props] [:> (-> stack (j/get :Screen)) props])
+
+(defn wrap-screen
+  [the-screen]
+  (g/gestureHandlerRootHOC
+   (paper/withTheme the-screen)))
 
 (defn root []
   (let [theme           (<sub [:sub/theme])
@@ -48,7 +54,8 @@
                paper/DarkTheme)}
 
      [:> nav/NavigationContainer
-      {:ref             (fn [el]
+      {:theme (-> nav (j/get :DarkTheme))
+       :ref             (fn [el]
                           (reset! !navigation-ref el))
        :on-ready        (fn []
                           (swap! !route-name-ref merge {:current (-> @!navigation-ref
@@ -69,13 +76,13 @@
                        ;; (screen-key->name last-screen) ;; use this for editing a screen quickly without re-navigating on hot reload
                        }
        (screen {:name      (:screen/feeds screen-key-name-mapping)
-                :component (paper/withTheme feeds-screen)})
+                :component (wrap-screen feeds-screen)})
        (screen {:name      (:screen/feed screen-key-name-mapping)
-                :component (paper/withTheme feed-screen)})
+                :component (wrap-screen feed-screen)})
        (screen {:name      (:screen/feed-item screen-key-name-mapping)
-                :component (paper/withTheme feed-item-screen)})
+                :component (wrap-screen feed-item-screen)})
        (screen {:name      (:screen/subscription screen-key-name-mapping)
-                :component (paper/withTheme subscription-screen)})]]]))
+                :component (wrap-screen subscription-screen)})]]]))
 
 (defn start
   {:dev/after-load true}
@@ -95,6 +102,8 @@
   (>evt [:event/set-auth-listener])
   (start))
 
+(comment
+  (g/gestureHandlerRootHOC (paper/withTheme feeds-screen)))
 (comment
   ;; Get user info
   (go (-> Auth
