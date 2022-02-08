@@ -197,6 +197,10 @@
   (->> db (select-one! [:stripe :stripe/prices])))
 (reg-sub :sub/possible-subscriptions possible-subscriptions)
 
+(defn free-pass [db]
+  (->> db (select-one! [:stripe :stripe/free-pass])))
+(reg-sub :sub/free-pass free-pass)
+
 (comment
   (->> @re-frame.db/app-db
        (select-one! [:menus :menu/playback-rate :playback-rate/visible]))

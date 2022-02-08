@@ -396,21 +396,21 @@
          :rate     rate})
   (->> cofx (setval [:db :feeds (sp/keypath feed-id) :feed/playback-rate] rate)
        (merge {:effect/set-playback-rate rate})))
-(reg-event-fx :event/set-playback-rate set-playback-rate)
+(reg-event-fx :event/set-playback-rate [base-interceptors] set-playback-rate)
 
 (defn set-auth-listener [cofx _]
   (println "Setting auth listener ----------------------------")
   (merge cofx {:effect/set-auth-listener true}))
-(reg-event-fx :event/set-auth-listener set-auth-listener)
+(reg-event-fx :event/set-auth-listener [base-interceptors] set-auth-listener)
 
 (defn init-for-logged-in-user [cofx _]
   (println "Initializing for potential logged in user ----------------------------")
   (merge cofx {:effect/init-for-logged-in-user true}))
-(reg-event-fx :event/init-for-logged-in-user init-for-logged-in-user)
+(reg-event-fx :event/init-for-logged-in-user [base-interceptors] init-for-logged-in-user)
 
 (defn set-stripe-data [db [_ stripe-data]]
   (->> db (setval [:stripe] stripe-data)))
-(reg-event-db :event/set-stripe-data set-stripe-data)
+(reg-event-db :event/set-stripe-data [base-interceptors] set-stripe-data)
 
 (comment
   (->> @re-frame.db/app-db

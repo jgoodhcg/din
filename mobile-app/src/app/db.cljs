@@ -63,11 +63,11 @@
                    :roam-pages [string?]
                    :stripe     (ds/maybe {:stripe/active-subscription {:stripe.price/id string?}
                                           :stripe/free-pass           (ds/maybe string?)
-                                          :stripe/prices              [{:stripe.price/id          string?
-                                                                        :stripe.price/unit-amount integer?
-                                                                        :stripe.price/description (ds/maybe string?)
-                                                                        :stripe.product/images    [string?]
-                                                                        :stripe.product/name      string?}]})
+                                          :stripe/prices              [{:stripe.price/id            string?
+                                                                        :stripe.price/unit-amount   integer?
+                                                                        :stripe.product/name        string?
+                                                                        :stripe.product/images      [string?]
+                                                                        :stripe.product/description (ds/maybe string?)}]})
                    :navigation {:navigation/last-screen (ds/maybe keyword?)}}
             :name ::app-db}))
 

@@ -65,7 +65,7 @@
                             (swap! !route-name-ref merge {:current current-route-name})))}
 
       [:> (navigator) {:header-mode        "none"
-                       :initial-route-name  (:screen/subscription screen-key-name-mapping)
+                       ;; :initial-route-name  (:screen/subscription screen-key-name-mapping)
                        ;; (screen-key->name last-screen) ;; use this for editing a screen quickly without re-navigating on hot reload
                        }
        (screen {:name      (:screen/feeds screen-key-name-mapping)
