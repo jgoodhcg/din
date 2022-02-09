@@ -194,13 +194,14 @@
                                     ;; it seems like there could be an instance where nothing is loaded
                                     ;; and it just sits with a spinner otherwise
                                     :status/loading)]
-                            (>evt-sync [:event/update-feed-item
-                                        {:feed-item/id feed-item-id
-                                         :feed/id      feed-id
-                                         :feed-item    {:feed-item/duration (or (j/get AVPlaybackStatus :durationMillis) 0)
+                            (>evt [:event/update-feed-item
+                                   {:feed-item/id feed-item-id
+                                    :feed/id      feed-id
+                                    :feed-item    {:feed-item/duration (or (j/get AVPlaybackStatus :durationMillis) 0)
                                                         :feed-item/position (or (j/get AVPlaybackStatus :positionMillis) 0)}}])
-                            (>evt-sync [:event/update-selected-item-status
-                                        {:status status}]))))))))
+                            (>evt [:event/update-selected-item-status
+                                   {:status status}])
+                            )))))))
 
 (reg-fx :effect/play-selected-item
         #(go

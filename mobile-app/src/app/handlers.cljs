@@ -201,7 +201,8 @@
                       :feed/items
                       (sp/keypath feed-item-id)]
                      #(merge % feed-item))))
-(reg-event-db :event/update-feed-item [base-interceptors] update-feed-item)
+(reg-event-db :event/update-feed-item ;; [base-interceptors]
+              update-feed-item)
 
 (defn update-all-feed-items [db [_ {feed-id    :feed/id
                                     feed-items :feed/items-not-indexed}]]
@@ -221,7 +222,8 @@
 
 (defn update-selected-item-status [db [_ {status :status}]]
   (->> db (setval [:selected :selected-feed/item-status] status)))
-(reg-event-db :event/update-selected-item-status [base-interceptors] update-selected-item-status)
+(reg-event-db :event/update-selected-item-status ;; [base-interceptors]
+              update-selected-item-status)
 
 (defn set-finished-override-all-items [db [_ {feed-id   :feed/id
                                               user-mark :feed-item/finished-override}]]
