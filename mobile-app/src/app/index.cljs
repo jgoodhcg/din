@@ -27,7 +27,8 @@
    [app.screen.feeds :refer [root] :rename {root feeds-screen}]
    [app.screen.feed :refer [root] :rename {root feed-screen}]
    [app.screen.feed-item :refer [root] :rename {root feed-item-screen}]
-   [app.screen.subscription :refer [root] :rename {root subscription-screen}]))
+   [app.screen.subscription :refer [root] :rename {root subscription-screen}]
+   [app.screen.settings :refer [root] :rename {root settings-screen}]))
 
 (def api-endpoint "https://yabrbam9si.execute-api.us-east-2.amazonaws.com/default/din-page-titles")
 
@@ -54,7 +55,7 @@
                paper/DarkTheme)}
 
      [:> nav/NavigationContainer
-      {:theme (-> nav (j/get :DarkTheme))
+      {:theme           (-> nav (j/get :DarkTheme))
        :ref             (fn [el]
                           (reset! !navigation-ref el))
        :on-ready        (fn []
@@ -71,18 +72,25 @@
                               (>evt [:event/save-navigation current-route-name]))
                             (swap! !route-name-ref merge {:current current-route-name})))}
 
-      [:> (navigator) {:header-mode        "none"
+      [:> (navigator) {:header-mode "none"
                        ;; :initial-route-name  (:screen/subscription screen-key-name-mapping)
                        ;; (screen-key->name last-screen) ;; use this for editing a screen quickly without re-navigating on hot reload
                        }
        (screen {:name      (:screen/feeds screen-key-name-mapping)
-                :component (wrap-screen feeds-screen)})
+                :component (wrap-screen feeds-screen)
+                :options   {:headerRight (fn [_]
+                                           (r/as-element
+                                           [:> paper/IconButton
+                                            {:icon     "cog-outline"
+                                             :on-press #(>evt [:event/navigate :screen/settings])}]))}})
        (screen {:name      (:screen/feed screen-key-name-mapping)
                 :component (wrap-screen feed-screen)})
        (screen {:name      (:screen/feed-item screen-key-name-mapping)
                 :component (wrap-screen feed-item-screen)})
        (screen {:name      (:screen/subscription screen-key-name-mapping)
-                :component (wrap-screen subscription-screen)})]]]))
+                :component (wrap-screen subscription-screen)})
+       (screen {:name      (:screen/settings screen-key-name-mapping)
+                :component (wrap-screen settings-screen)})]]]))
 
 (defn start
   {:dev/after-load true}

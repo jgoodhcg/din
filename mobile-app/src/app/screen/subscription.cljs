@@ -32,15 +32,16 @@
               ;; TODO 2022-02-06 Justin move this to sub logic
               (let [purchased (= id active-sub)
                     amount (-> amount (/ 100))]
-                [:> paper/Card {:mode "outlined" :style (tw "w-80")}
-                 [:> paper/Card.Title {:title (str name (when purchased " (purchased)"))}]
-                 [:> paper/Card.Content
-                  [:> paper/Title (str "$" amount)]
-                  [:> paper/Paragraph desc]]
-                 [:> paper/Card.Actions
-                  [:> paper/Button {:mode     "contained"
-                                    :disabled purchased}
-                   "Purchase"]]]))
+                [:> rn/View {:key id}
+                 [:> paper/Card {:mode "outlined" :style (tw "w-80")}
+                  [:> paper/Card.Title {:title name}]
+                  [:> paper/Card.Content
+                   [:> paper/Title (str "$" amount)]
+                   [:> paper/Paragraph desc]]
+                  [:> paper/Card.Actions
+                   [:> paper/Button {:mode     "contained"
+                                     :disabled purchased}
+                    (if purchased "Owned" "Buy")]]]]))
             ]
 
            ]]))]))

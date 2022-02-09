@@ -21,7 +21,8 @@
                                        :feed         "Feed"
                                        :feeds        "Feeds"
                                        :payment      "Payment"
-                                       :subscription "Subscription"})
+                                       :subscription "Subscription"
+                                       :settings     "Settings"})
 
 (defn screen-key->name [k] (get screen-key-name-mapping k))
 (defn screen-name->key [n] (-> screen-key-name-mapping map-invert (get n)))

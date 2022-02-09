@@ -414,6 +414,10 @@
   (->> db (setval [:stripe] stripe-data)))
 (reg-event-db :event/set-stripe-data [base-interceptors] set-stripe-data)
 
+(defn navigate [cofx [_ screen-id]]
+  (merge cofx {:effect/navigate screen-id}))
+(reg-event-fx :event/navigate [base-interceptors] navigate)
+
 (comment
   (->> @re-frame.db/app-db
        (select-one! [:feeds
