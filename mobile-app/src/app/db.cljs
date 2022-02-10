@@ -61,7 +61,7 @@
                                                                                          :status/stopped}))
                                 :selected-feed/item-selected-note-id (ds/maybe uuid?)}
                    :roam-pages [string?]
-                   :stripe     (ds/maybe {:stripe/active-subscription {:stripe.price/id string?}
+                   :stripe     (ds/maybe {:stripe/active-subscription (ds/maybe {:stripe.price/id string?})
                                           :stripe/free-pass           (ds/maybe string?)
                                           :stripe/prices              [{:stripe.price/id            string?
                                                                         :stripe.price/unit-amount   integer?

@@ -109,4 +109,5 @@
   )
 
 (add-resolvers-or-mutations! [create-subscription
-                              create-setup-intent])
+                              create-setup-intent
+                              create-checkout-session])

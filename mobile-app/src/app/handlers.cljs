@@ -418,6 +418,11 @@
   (merge cofx {:effect/navigate screen-id}))
 (reg-event-fx :event/navigate [base-interceptors] navigate)
 
+(defn go-to-subscription [cofx _]
+  (merge cofx {:effect/navigate         :screen/subscription
+               :effect/load-stripe-data true}))
+(reg-event-fx :event/go-to-subscription [base-interceptors] go-to-subscription)
+
 (comment
   (->> @re-frame.db/app-db
        (select-one! [:feeds

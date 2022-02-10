@@ -247,40 +247,46 @@
                (j/call :setStatusAsync (j/lit {:rate % :shouldCorrectPitch true}))
                <p!)))
 
-(defn <load-stripe-data!
-  []
+(defn <eql-request
+  [eql]
   (go
-    (tap> {:location "<load-stripe-data!"
-           :msg      "loading stripe data"})
+    (tap> {:location "<eql-request"
+           :req      eql})
     (let [w   (transit/writer :json)
           r   (transit/reader :json)
           jwt (-> Auth
                   (j/call :currentSession)
                   <p!
                   (j/call :getIdToken)
-                  (j/get :jwtToken))
-          req [:user/email
-               :stripe/free-pass
-               {:stripe/active-subscription
-                [:stripe.subscription/created
-                 :stripe.subscription/current-period-end
-                 :stripe.subscription/current-period-start
-                 :stripe.subscription/cancel-at-period-end
-                 :stripe.price/id]}
-               {:stripe/prices
-                [:stripe.price/id
-                 :stripe.price/unit-amount
-                 :stripe.product/name
-                 :stripe.product/description
-                 :stripe.product/images]}
-               ]
-          res (-> "https://rf8gjfxxbd.execute-api.us-east-2.amazonaws.com/default/din-eql"
+                  (j/get :jwtToken))]
+      (-> "https://rf8gjfxxbd.execute-api.us-east-2.amazonaws.com/default/din-eql"
                   (http/post {:with-credentials? false
                               :headers           {"Authorization" (str "Bearer " jwt)}
-                              :json-params       {:transit-req (->> req (transit/write w))}})
+                              :json-params       {:transit-req (->> eql (transit/write w))}})
                   <!
                   :body
-                  (->> (transit/read r)))]
+                  (doto tap>)
+                  (->> (transit/read r))))))
+
+(defn <load-stripe-data!
+  []
+  (go
+    (tap> {:location "<load-stripe-data!"
+           :msg      "loading stripe data"})
+    (let [res (<! (<eql-request [:user/email
+                                 :stripe/free-pass
+                                 {:stripe/active-subscription
+                                  [:stripe.subscription/created
+                                   :stripe.subscription/current-period-end
+                                   :stripe.subscription/current-period-start
+                                   :stripe.subscription/cancel-at-period-end
+                                   :stripe.price/id]}
+                                 {:stripe/prices
+                                  [:stripe.price/id
+                                   :stripe.price/unit-amount
+                                   :stripe.product/name
+                                   :stripe.product/description
+                                   :stripe.product/images]}]))]
       (>evt [:event/set-stripe-data res]))))
 
 (reg-fx :effect/set-auth-listener
@@ -318,6 +324,23 @@
                 (tap> {:location :effect/init-for-logged-in-user
                        :msg      "Is logged in, fetching stripe data"})
                 (go (<! (<load-stripe-data!))))))))
+
+(reg-fx :effect/load-stripe-data
+        (fn []
+          (tap> {:location :effect/load-stripe-data})
+          (go (<! (<load-stripe-data!)))))
+
+(reg-fx :effect/get-checkout-url
+        (fn []
+          (tap> {:location :effect/get-checkout-url})
+          (go
+            (let [res (<! (<eql-request [{`(create-checkout-session
+                                            {:stripe.checkout/success-url "https://uh.success.idk"
+                                             :stripe.checkout/cancel-url "https://uh.cancel.idk"})
+                                          [:stripe.checkout/checkout-url]}]))]
+              (tap> {:location :effect/get-checkout-url
+                     :res res})))
+          ))
 
 (comment
   (go

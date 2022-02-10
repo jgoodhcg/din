@@ -19,7 +19,7 @@
 
            [:> paper/Button {:mode "contained"
                              :icon "account"
-                             :on-press #(>evt [:event/navigate :screen/subscription])}
+                             :on-press #(>evt [:event/go-to-subscription])}
             "Subscription"]
 
            ]]))]))
