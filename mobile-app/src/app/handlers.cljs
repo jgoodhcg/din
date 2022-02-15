@@ -13,8 +13,9 @@
   "Throw an exception if db doesn't have a valid spec."
   [spec db event]
   (when-not (s/valid? spec db)
-    (tap> {:spec-failure-event event})
     (let [explanation (s/explain-str spec db)]
+      (tap> {:spec-failure-event event
+             :explanation explanation})
       (throw (str "Spec check failed: " explanation))
       true)))
 
@@ -41,7 +42,9 @@
     :id :persist
     :after (fn [context]
              (->> context (setval [:effects :effect/persist]
-                                  (-> context :effects :db str))))))
+                                  (-> context
+                                      :effects
+                                      :db))))))
 
 (def base-interceptors  [persist
                          ;; (when ^boolean goog.DEBUG debug) ;; use this for some verbose re-frame logging
@@ -124,7 +127,9 @@
     (merge {:db         (p/deep-merge default-app-db app-db) ;; merge default to handle accretion changes without blowing up spec check
             :dispatch-n [[:event/set-version version]
                          [:event/refresh-feeds]
-                         [:event/init-for-logged-in-user]]}
+                         [:event/init-for-logged-in-user]]
+            :effect/load-roam-credentials
+            true}
            (when (and (some? id)
                       (some? item-id))
              {:effect/load-playback-object
@@ -422,6 +427,23 @@
   (merge cofx {:effect/navigate         :screen/subscription
                :effect/load-stripe-data true}))
 (reg-event-fx :event/go-to-subscription [base-interceptors] go-to-subscription)
+
+(defn persist-roam-credentials [cofx _]
+  (let [roam-credentials (->> cofx (select-one! [:db :roam-credentials]))]
+    (merge cofx {:effect/persist-roam-credentials roam-credentials})))
+(reg-event-fx :event/persist-roam-credentials [base-interceptors] persist-roam-credentials)
+
+(defn update-roam-username [cofx [_ username]]
+  (->> cofx
+       (setval [:db :roam-credentials :roam-credentials/username] username)
+       (merge {:dispatch [:event/persist-roam-credentials]})))
+(reg-event-fx :event/update-roam-username [base-interceptors] update-roam-username)
+
+(defn update-roam-password [cofx [_ password]]
+  (->> cofx
+       (setval [:db :roam-credentials :roam-credentials/password] password)
+       (merge {:dispatch [:event/persist-roam-credentials]})))
+(reg-event-fx :event/update-roam-password [base-interceptors] update-roam-password)
 
 (comment
   (->> @re-frame.db/app-db

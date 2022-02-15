@@ -46,29 +46,31 @@
 (s/def ::feeds (s/and map? (s/every-kv uuid? ::feed)))
 
 (def app-db-spec
-  (ds/spec {:spec {:settings   {:theme (s/spec #{:light :dark})}
-                   :version    string?
-                   :feeds      ::feeds
+  (ds/spec {:spec {:settings         {:theme (s/spec #{:light :dark})}
+                   :version          string?
+                   :feeds            ::feeds
                    ;; TODO justin 2021-05-17 Change all :*/visible to "visibility"
-                   :modals     {:modal/feed-add    {:feed-add/visible boolean?}
-                                :modal/feed-remove {:feed-remove/id (ds/maybe uuid?)}}
-                   :menus      {:menu/playback-rate {:playback-rate/visible boolean?}}
-                   :selected   {:selected-feed/id                    (ds/maybe uuid?)
-                                :selected-feed/item-id               (ds/maybe string?)
-                                :selected-feed/item-status           (ds/maybe (s/spec #{:status/playing
-                                                                                         :status/loading
-                                                                                         :status/paused
-                                                                                         :status/stopped}))
-                                :selected-feed/item-selected-note-id (ds/maybe uuid?)}
-                   :roam-pages [string?]
-                   :stripe     (ds/maybe {:stripe/active-subscription (ds/maybe {:stripe.price/id string?})
-                                          :stripe/free-pass           (ds/maybe string?)
-                                          :stripe/prices              [{:stripe.price/id            string?
-                                                                        :stripe.price/unit-amount   integer?
-                                                                        :stripe.product/name        string?
-                                                                        :stripe.product/images      [string?]
-                                                                        :stripe.product/description (ds/maybe string?)}]})
-                   :navigation {:navigation/last-screen (ds/maybe keyword?)}}
+                   :modals           {:modal/feed-add    {:feed-add/visible boolean?}
+                                      :modal/feed-remove {:feed-remove/id (ds/maybe uuid?)}}
+                   :menus            {:menu/playback-rate {:playback-rate/visible boolean?}}
+                   :selected         {:selected-feed/id                    (ds/maybe uuid?)
+                                      :selected-feed/item-id               (ds/maybe string?)
+                                      :selected-feed/item-status           (ds/maybe (s/spec #{:status/playing
+                                                                                               :status/loading
+                                                                                               :status/paused
+                                                                                               :status/stopped}))
+                                      :selected-feed/item-selected-note-id (ds/maybe uuid?)}
+                   :roam-pages       [string?]
+                   :roam-credentials {(ds/opt :roam-credentials/password) string?
+                                      (ds/opt :roam-credentials/username) string?}
+                   :stripe           (ds/maybe {:stripe/active-subscription (ds/maybe {:stripe.price/id string?})
+                                                :stripe/free-pass           (ds/maybe string?)
+                                                :stripe/prices              [{:stripe.price/id            string?
+                                                                              :stripe.price/unit-amount   integer?
+                                                                              :stripe.product/name        string?
+                                                                              :stripe.product/images      [string?]
+                                                                              :stripe.product/description (ds/maybe string?)}]})
+                   :navigation       {:navigation/last-screen (ds/maybe keyword?)}}
             :name ::app-db}))
 
 (def default-app-db
@@ -106,13 +108,14 @@
               {:feed/url "https://feeds.transistor.fm/software-social"
                :feed/id  #uuid "cca6a4b3-23aa-4055-a72f-0286108492ea"}
               }
-   :modals     {:modal/feed-add    {:feed-add/visible false}
-                :modal/feed-remove {:feed-remove/id nil}}
-   :menus      {:menu/playback-rate {:playback-rate/visible false}}
-   :selected   {:selected-feed/id                    nil
-                :selected-feed/item-id               nil
-                :selected-feed/item-status           nil
-                :selected-feed/item-selected-note-id nil}
-   :roam-pages []
-   :navigation {:navigation/last-screen nil}
-   :stripe     nil})
+   :modals           {:modal/feed-add    {:feed-add/visible false}
+                      :modal/feed-remove {:feed-remove/id nil}}
+   :menus            {:menu/playback-rate {:playback-rate/visible false}}
+   :selected         {:selected-feed/id                    nil
+                      :selected-feed/item-id               nil
+                      :selected-feed/item-status           nil
+                      :selected-feed/item-selected-note-id nil}
+   :roam-pages       []
+   :roam-credentials {}
+   :navigation       {:navigation/last-screen nil}
+   :stripe           nil})

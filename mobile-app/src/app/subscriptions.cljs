@@ -201,6 +201,10 @@
   (->> db (select-one! [:stripe :stripe/free-pass])))
 (reg-sub :sub/free-pass free-pass)
 
+(defn roam-credentials [db]
+  (->> db (select-one! [:roam-credentials])))
+(reg-sub :sub/roam-credentials roam-credentials)
+
 (comment
   (->> @re-frame.db/app-db
        (select-one! [:menus :menu/playback-rate :playback-rate/visible]))

@@ -5,6 +5,7 @@
    ["react-native" :as rn]
    ["expo-av" :as av]
    ["expo-file-system" :as fs]
+   ["expo-secure-store" :as ss]
    ["expo-constants" :as expo-constants]
    ["react-native-controlled-mentions" :as cm]
 
@@ -19,6 +20,10 @@
 
    [app.helpers :refer [>evt >evt-sync screen-key-name-mapping millis->str]]
    [potpuri.core :as p]))
+
+(def writer (transit/writer :json))
+
+(def reader (transit/reader :json))
 
 (def dd (-> fs (j/get :documentDirectory)))
 
@@ -89,11 +94,41 @@
           (doall (->> feeds (map <refresh-feed)))))
 
 (reg-fx :effect/persist
-        (fn [app-db-str]
+        (fn [app-db]
           (-> fs (j/call :writeAsStringAsync
                          app-db-file
-                         app-db-str))))
+                         (-> app-db
+                             (dissoc :roam-credentials)
+                             (->> (transit/write writer)))))))
 
+(comment
+  (-> ss (j/call :setItemAsync "test-key" "test-value"))
+  (go (-> ss (j/call :getItemAsync "test-key") <p! tap>))
+  (go (-> ss (j/call :getItemAsync "roam-credentials") <p! (->> (transit/read reader)) tap>))
+  )
+
+(reg-fx :effect/persist-roam-credentials
+        (fn [roam-credentials]
+          (tap> {:location :effect/persist-roam-credentials})
+          (-> ss (j/call :setItemAsync
+                         "roam-credentials"
+                         (->> roam-credentials
+                              (transit/write writer))))))
+
+(reg-fx :effect/load-roam-credentials
+        (fn []
+          (tap> {:location :effect/load-roam-credentials})
+          (go (-> ss
+                  (j/call :getItemAsync "roam-credentials")
+                  <p!
+                  (->> (transit/read reader))
+                  ((fn [{username :roam-credentials/username
+                         password :roam-credentials/password}]
+                     (when (some? username)
+                       (>evt [:event/update-roam-username username]))
+                     (when (some? password)
+                       (>evt [:event/update-roam-password password]))))
+                  ))))
 (reg-fx :effect/load
         (fn []
           (println "load fx ----------------------------------------------------")
@@ -120,8 +155,8 @@
                            (println "load fx: file exists -------------------------------")
                            (-> fs (j/call :readAsStringAsync app-db-file)
                                <p!
-                               edn/read-string
-                               (#(>evt [:event/load-app-db {:app-db  {}
+                               (->> (transit/read reader))
+                               (#(>evt [:event/load-app-db {:app-db  {} ;; TODO this should be %
                                                             :version version}])))
                            (catch js/Object e
                              (-> rn/Alert (j/call :alert "Failure on readAsStringAsync" (str e))))))))))
@@ -247,14 +282,13 @@
                (j/call :setStatusAsync (j/lit {:rate % :shouldCorrectPitch true}))
                <p!)))
 
+
 (defn <eql-request
   [eql]
   (go
     (tap> {:location "<eql-request"
            :req      eql})
-    (let [w   (transit/writer :json)
-          r   (transit/reader :json)
-          jwt (-> Auth
+    (let [jwt (-> Auth
                   (j/call :currentSession)
                   <p!
                   (j/call :getIdToken)
@@ -262,11 +296,11 @@
       (-> "https://rf8gjfxxbd.execute-api.us-east-2.amazonaws.com/default/din-eql"
                   (http/post {:with-credentials? false
                               :headers           {"Authorization" (str "Bearer " jwt)}
-                              :json-params       {:transit-req (->> eql (transit/write w))}})
+                              :json-params       {:transit-req (->> eql (transit/write writer))}})
                   <!
                   :body
                   (doto tap>)
-                  (->> (transit/read r))))))
+                  (->> (transit/read reader))))))
 
 (defn <load-stripe-data!
   []
