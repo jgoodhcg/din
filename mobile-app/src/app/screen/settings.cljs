@@ -21,8 +21,8 @@
            [:> rn/View {:style (tw "flex flex-1 px-8 w-full")}
             [:> paper/Button {:mode     "outlined"
                               :icon     "account"
-                              :on-press #(>evt [:event/go-to-subscription])}
-             "Subscription"]
+                              :on-press #(>evt [:event/navigate :screen/account])}
+             "Account"]
 
             [:> paper/Divider {:style (tw "w-full my-8")}]
 

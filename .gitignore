@@ -12,3 +12,5 @@ backend/stripe/build/
 .clj-kondo/
 
 backend/eql/build/
+
+mobile-app/src/app/secrets.cljs

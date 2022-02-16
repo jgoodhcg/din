@@ -8,6 +8,7 @@
    ["expo-secure-store" :as ss]
    ["expo-constants" :as expo-constants]
    ["react-native-controlled-mentions" :as cm]
+   ["@supabase/supabase-js" :as sp]
 
    [re-frame.core :refer [reg-fx]]
    [applied-science.js-interop :as j]
@@ -16,11 +17,23 @@
    [cljs-http.client :as http]
    [clojure.edn :as edn]
    [cognitect.transit :as transit]
+   [potpuri.core :as p]
    [tick.alpha.api :as t]
 
    [app.helpers :refer [>evt >evt-sync screen-key-name-mapping millis->str]]
-   [potpuri.core :as p]))
+   [app.secrets :refer [supabase-url supabase-anon-key]]
+   ))
 
+(def supabase
+  (-> sp
+      (j/call :createClient supabase-url supabase-anon-key)))
+
+(comment
+  (-> supabase
+      (j/get :auth)
+      (j/call :signUp (j/lit {:email    "jgoodhcg+test1@gmail.com"
+                              :password "mysecurepassword"})))
+  )
 (def writer (transit/writer :json))
 
 (def reader (transit/reader :json))

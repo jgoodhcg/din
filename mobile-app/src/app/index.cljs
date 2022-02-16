@@ -28,7 +28,11 @@
    [app.screen.feed :refer [root] :rename {root feed-screen}]
    [app.screen.feed-item :refer [root] :rename {root feed-item-screen}]
    [app.screen.subscription :refer [root] :rename {root subscription-screen}]
-   [app.screen.settings :refer [root] :rename {root settings-screen}]))
+   [app.screen.settings :refer [root] :rename {root settings-screen}]
+   [app.screen.account :refer [root] :rename {root account-screen}]
+   [app.screen.login :refer [root] :rename {root login-screen}]
+   [app.screen.signup :refer [root] :rename {root signup-screen}]
+   ))
 
 (def api-endpoint "https://yabrbam9si.execute-api.us-east-2.amazonaws.com/default/din-page-titles")
 
@@ -42,6 +46,20 @@
   [the-screen]
   (g/gestureHandlerRootHOC
    (paper/withTheme the-screen)))
+
+(defn settings-button [] ;; name this "global?"
+  (r/as-element
+   ;; TODO 2022-02-16 Justin Add logged in identifier?
+   [:> paper/IconButton
+    {:icon     "cog-outline"
+     :on-press #(>evt [:event/navigate :screen/settings])}]))
+
+(defn auth-button []
+  (r/as-element
+   (let [user nil]
+     [:> paper/IconButton
+      {:icon (if (some? user) "account-check" "account-cancel-outline")
+       :on-press #(>evt [:event/navigate :screen/account])}])))
 
 (defn root []
   (let [theme           (<sub [:sub/theme])
@@ -72,35 +90,45 @@
                               (>evt [:event/save-navigation current-route-name]))
                             (swap! !route-name-ref merge {:current current-route-name})))}
 
-      [:> (navigator) {:header-mode "none"
-                       ;; :initial-route-name  (:screen/subscription screen-key-name-mapping)
+      [:> (navigator) {:header-mode        "none"
+                       :initial-route-name (:screen/account screen-key-name-mapping)
                        ;; (screen-key->name last-screen) ;; use this for editing a screen quickly without re-navigating on hot reload
                        }
        (screen {:name      (:screen/feeds screen-key-name-mapping)
                 :component (wrap-screen feeds-screen)
-                :options   {:headerRight (fn [_]
-                                           (r/as-element
-                                           [:> paper/IconButton
-                                            {:icon     "cog-outline"
-                                             :on-press #(>evt [:event/navigate :screen/settings])}]))}})
+                :options   {:headerRight auth-button}})
        (screen {:name      (:screen/feed screen-key-name-mapping)
-                :component (wrap-screen feed-screen)})
+                :component (wrap-screen feed-screen)
+                :options   {:headerRight auth-button}})
        (screen {:name      (:screen/feed-item screen-key-name-mapping)
-                :component (wrap-screen feed-item-screen)})
+                :component (wrap-screen feed-item-screen)
+                :options   {:headerRight auth-button}})
        (screen {:name      (:screen/subscription screen-key-name-mapping)
-                :component (wrap-screen subscription-screen)})
+                :component (wrap-screen subscription-screen)
+                :options   {:headerRight auth-button}})
        (screen {:name      (:screen/settings screen-key-name-mapping)
-                :component (wrap-screen settings-screen)})]]]))
+                :component (wrap-screen settings-screen)
+                :options   {:headerRight auth-button}})
+       (screen {:name      (:screen/account screen-key-name-mapping)
+                :component (wrap-screen account-screen)
+                :options   {:headerRight auth-button}})
+       (screen {:name      (:screen/login screen-key-name-mapping)
+                :component (wrap-screen login-screen)
+                :options   {:headerRight auth-button}})
+       (screen {:name      (:screen/signup screen-key-name-mapping)
+                :component (wrap-screen signup-screen)
+                :options   {:headerRight auth-button}})]]]))
 
 (defn start
   {:dev/after-load true}
   []
-  (expo/render-root
-    (r/as-element ;; [root]
-      [(r/adapt-react-class
-         (withAuthenticator
-          (r/reactify-component root)
-          (clj->js {:signUpConfig {:hiddenDefaults ["phone_number"]}})))])))
+  (expo/render-root (r/as-element [root])
+    ;; (r/as-element
+    ;;   [(r/adapt-react-class
+    ;;      (withAuthenticator
+    ;;       (r/reactify-component root)
+    ;;       (clj->js {:signUpConfig {:hiddenDefaults ["phone_number"]}})))])
+    ))
 
 (defn init []
   (println "hellooooooooooo ----------------------------------------------------")

@@ -22,9 +22,13 @@
                                        :feeds        "Feeds"
                                        :payment      "Payment"
                                        :subscription "Subscription"
-                                       :settings     "Settings"})
+                                       :settings     "Settings"
+                                       :account      "Account"
+                                       :login        "Login"
+                                       :signup       "Signup"})
 
 (defn screen-key->name [k] (get screen-key-name-mapping k))
+
 (defn screen-name->key [n] (-> screen-key-name-mapping map-invert (get n)))
 
 (defn pad [n] (if (-> n str count (< 2))
