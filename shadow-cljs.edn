@@ -29,7 +29,8 @@
    :output-to  "backend/eql/build/main.js"}
 
   :roam-plugin
-  {:target :browser
+  {:target     :browser
+   :js-options {:js-package-dirs ["roam-plugin/node_modules"]}
    :output-dir "roam-plugin/public/assets/app/js"
    :asset-path "/assets/app/js"
-   :modules {:main {:entries [roam-plugin.core]}}}}}
+   :modules    {:main {:entries [roam-plugin.core]}}}}}

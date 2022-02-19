@@ -1,0 +1,12 @@
+{
+  "name": "roam-plugin",
+  "version": "0.0.1",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^1.30.3"
+  },
+  "devDependencies": {
+    "shadow-cljs": "^2.16.12"
+  }
+}
