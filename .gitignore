@@ -14,3 +14,5 @@ backend/stripe/build/
 backend/eql/build/
 
 mobile-app/src/app/secrets.cljs
+
+roam-plugin/public/
