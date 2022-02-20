@@ -5,6 +5,7 @@
             [applied-science.js-interop :as j]
             [cljs.core.async :refer [go <!]]
             [cljs.core.async.interop :refer [<p!]]
+            [potpuri.core :as pot]
 
             [roam-plugin.secrets :refer [supabase-anon-key
                                          supabase-url]]
@@ -37,6 +38,50 @@
       (j/call :getElementById "din-login-root")
       (j/call :remove)))
 
+(defn interval-sync [])
+
+(def titles-query
+  "[:find ?p ?title ?uid ?edit
+    :where [?p :node/title ?title]
+           [?p :block/uid ?uid]
+           [?p :edit/time ?edit]]")
+
+(defn init-sync [supabase]
+  (go
+    (let [user       (-> supabase
+                         (j/get :auth)
+                         (j/call :user))
+          user-id    (-> user (j/get :id))
+          res        (-> supabase
+                         (j/call :from "roam__sync")
+                         (j/call :select "roam_sync__latest")
+                         <p!)
+          last-sync  (or (-> res
+                             (j/get :data)
+                             (js->clj :keywordize-keys true)
+                             first)
+                         0)
+          titles     (-> js/roamAlphaAPI
+                         (j/call :q titles-query)
+                         (js->clj :keywordize-keys true)
+                         (->> (filter #(> (nth % 3) last-sync))))
+          title-rows (->> titles
+                          (mapv (fn [[_ title uid edit]]
+                                  (j/lit {:user__id    user-id
+                                          :block__uid  uid
+                                          :node__title title
+                                          :edit__time  edit}))))]
+
+      (println (pot/map-of last-sync (count title-rows)))
+      (println (-> supabase
+                   (j/call :from "roam__pages")
+                   (j/call :upsert (clj->js title-rows))
+                   <p!))
+      (println "pages should be there")
+
+
+      )))
+
 (defn login-submit-gen [supabase]
   (fn []
     (let [email    (-> js/document (j/call :getElementById "din-email") (j/get :value))
@@ -47,12 +92,14 @@
         (go
           (-> supabase
               (j/get :auth)
-              (j/call :signIn (j/lit {:email email :password password}))
-              <p!
-              (doto println))
-          )
-        )
-      )))
+              (j/call :signIn (j/lit {:email    email
+                                      :password password}))
+              <p!)
+          (let [user (-> supabase (j/get :auth) (j/call :user))]
+            (if (some? user)
+              (do (remove-login-root)
+                  (init-sync supabase))
+              (js/alert "Login failed"))))))))
 
 (defn login [supabase]
   (let [app        (-> js/document (j/call :getElementById "app"))
@@ -73,12 +120,13 @@
 ;; self executing anonymous function
 ;; this should "hide" my anon key and supabase client from other scripts in the roam graph
 ((fn []
-   (let [supabase         (-> sp (j/call :createClient supabase-url supabase-anon-key))
-         maybe-access-key (-> js/localStorage (j/call :getItem "din-roam-supabase-user-token"))]
-     (if (some? maybe-access-key)
+   (let [supabase (-> sp (j/call :createClient supabase-url supabase-anon-key))
+         user     (-> supabase (j/get :auth) (j/call :user))]
+     (println user)
+     (if (some? user)
        ;; get last sync
        ;; sync pages modified since then
        ;; set up sync interval
-       (println (str "all logged in: " maybe-access-key))
+       (init-sync supabase)
        ;; prompt to login
        (login supabase)))))
