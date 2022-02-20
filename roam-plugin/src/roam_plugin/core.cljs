@@ -1,15 +1,12 @@
 (ns roam-plugin.core
-  (:require
-            ["@supabase/supabase-js" :as sp]
+  (:require ["@supabase/supabase-js" :as sp]
 
             [applied-science.js-interop :as j]
-            [cljs.core.async :refer [go <!]]
+            [cljs.core.async :refer [go]]
             [cljs.core.async.interop :refer [<p!]]
             [potpuri.core :as pot]
 
-            [roam-plugin.secrets :refer [supabase-anon-key
-                                         supabase-url]]
-            ))
+            [roam-plugin.secrets :refer [supabase-anon-key supabase-url]]))
 
 (def login-form
   "<div class=\"container\" style=\"margin-top: 80px;\">
@@ -46,41 +43,56 @@
            [?p :block/uid ?uid]
            [?p :edit/time ?edit]]")
 
-(defn init-sync [supabase]
+(defn sync [supabase]
   (go
     (let [user       (-> supabase
                          (j/get :auth)
                          (j/call :user))
           user-id    (-> user (j/get :id))
-          res        (-> supabase
+          s-res      (-> supabase
+                         ;; TODO 2022-02-20 Justin add common key conversion stuff
                          (j/call :from "roam__sync")
                          (j/call :select "roam_sync__latest")
                          <p!)
-          last-sync  (or (-> res
+          s-error    (-> s-res (j/get :error))
+          last-sync  (or (-> s-res
                              (j/get :data)
                              (js->clj :keywordize-keys true)
-                             first)
+                             first
+                             ;; TODO 2022-02-20 Justin add common key conversion stuff
+                             :roam_sync__latest)
                          0)
           titles     (-> js/roamAlphaAPI
                          (j/call :q titles-query)
                          (js->clj :keywordize-keys true)
-                         (->> (filter #(> (nth % 3) last-sync))))
+                         ;; a little overlap since last sync in case the user is editing while this runs or something
+                         (->> (filter #(> (nth % 3) (-> last-sync (- 1000))))))
           title-rows (->> titles
                           (mapv (fn [[_ title uid edit]]
+                                  ;; TODO 2022-02-20 Justin add common key conversion stuff
                                   (j/lit {:user__id    user-id
                                           :block__uid  uid
                                           :node__title title
-                                          :edit__time  edit}))))]
+                                          :edit__time  edit}))))
+          u-res      (-> supabase
+                         ;; TODO 2022-02-20 Justin add common key conversion stuff
+                         (j/call :from "roam__pages")
+                         (j/call :upsert (clj->js title-rows))
+                         <p!)
+          u-error    (-> u-res (j/get :error))
+          now        (-> js/Date (j/call :now))]
 
-      (println (pot/map-of last-sync (count title-rows)))
-      (println (-> supabase
-                   (j/call :from "roam__pages")
-                   (j/call :upsert (clj->js title-rows))
-                   <p!))
-      (println "pages should be there")
+      (when (and (nil? s-error) (nil? u-error))
+        (-> supabase
+            ;; TODO 2022-02-20 Justin add common key conversion stuff
+            (j/call :from "roam__sync")
+            (j/call :upsert (j/lit {:user__id          user-id
+                                    :roam_sync__latest now}))
+            <p!)))))
 
-
-      )))
+(defn init-sync [supabase]
+  (sync supabase)
+  (js/setInterval #(sync supabase) 60000))
 
 (defn login-submit-gen [supabase]
   (fn []
@@ -90,16 +102,20 @@
       (when (empty? password) (js/alert "Please enter din password to login"))
       (when (and (not-empty email) (not-empty password))
         (go
-          (-> supabase
-              (j/get :auth)
-              (j/call :signIn (j/lit {:email    email
-                                      :password password}))
-              <p!)
-          (let [user (-> supabase (j/get :auth) (j/call :user))]
+          (let [res (-> supabase
+                        (j/get :auth)
+                        (j/call :signIn (j/lit {:email    email
+                                                :password password}))
+                        <p!)
+                error (-> res (j/get :error))
+                user (-> supabase (j/get :auth) (j/call :user))]
+
+            (when (some? error) (println (pot/map-of error)))
+
             (if (some? user)
               (do (remove-login-root)
                   (init-sync supabase))
-              (js/alert "Login failed"))))))))
+              (js/alert "Din Login failed"))))))))
 
 (defn login [supabase]
   (let [app        (-> js/document (j/call :getElementById "app"))
@@ -113,16 +129,14 @@
         (j/call :addEventListener "click" (login-submit-gen supabase)))
     (-> js/document
         (j/call :getElementById "din-login-cancel")
-        (j/call :addEventListener "click" remove-login-root))
-   )
-  )
+        (j/call :addEventListener "click" remove-login-root))))
 
 ;; self executing anonymous function
 ;; this should "hide" my anon key and supabase client from other scripts in the roam graph
+;; anon key would probably be easy to spot from source file though ...
 ((fn []
    (let [supabase (-> sp (j/call :createClient supabase-url supabase-anon-key))
          user     (-> supabase (j/get :auth) (j/call :user))]
-     (println user)
      (if (some? user)
        ;; get last sync
        ;; sync pages modified since then
