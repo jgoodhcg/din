@@ -12,7 +12,7 @@
   (r/as-element
     [(fn []
        (let [{email :email
-              :as user} nil]
+              :as user} (<sub [:sub/supabase-user])]
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}
           [:> rn/StatusBar {:visibility "hidden"}]
@@ -21,22 +21,25 @@
            [:> rn/View {:style (tw "flex flex-1 px-8 w-full")}
             (if (some? user)
               [:> rn/View
-               [:> paper/Text (str "You are signed in as " email)]
-               [:> paper/Button {:mode     "flat"
+               [:> paper/Subheading "You are signed in as"]
+               [:> paper/Subheading email]
+               [:> paper/Button {:style (tw "mt-8")
+                                 :mode     "flat"
                                  :icon     "account-cancel-outline"
-                                 :on-press #(>evt [:event/navigate :screen/signup])}
-                "Logout"]]
+                                 :on-press #(>evt [:event/sign-out])}
+                "Sign Out"]]
+
               [:> rn/View {:style (tw "flex flex-col h-48 justify-between")}
                [:> paper/Button {                              :mode     "contained"
                               :icon     "account"
-                              :on-press #(>evt [:event/navigate :screen/login])}
-             "Login"]
+                              :on-press #(>evt [:event/navigate :screen/sign-in])}
+             "Sign In"]
 
             [:> paper/Button {:style    (tw "mb-16")
                               :mode     "outlined"
                               :icon     "account-outline"
-                              :on-press #(>evt [:event/navigate :screen/signup])}
-             "Signup"]])
+                              :on-press #(>evt [:event/navigate :screen/sign-up])}
+             "Sign Up"]])
 
 
 

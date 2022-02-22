@@ -110,6 +110,7 @@
                 error (-> res (j/get :error))
                 user (-> supabase (j/get :auth) (j/call :user))]
 
+            ;; TODO 2022-02-21 Justin use res instead of calling auth to get user
             (when (some? error) (println (pot/map-of error)))
 
             (if (some? user)

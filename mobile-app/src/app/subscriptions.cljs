@@ -201,10 +201,6 @@
   (->> db (select-one! [:stripe :stripe/free-pass])))
 (reg-sub :sub/free-pass free-pass)
 
-(defn roam-credentials [db]
-  (->> db (select-one! [:roam-credentials])))
-(reg-sub :sub/roam-credentials roam-credentials)
-
 (comment
   (->> @re-frame.db/app-db
        (select-one! [:menus :menu/playback-rate :playback-rate/visible]))
@@ -235,3 +231,21 @@
                   (fn [a b] (tap> {:a a
                                   :b b}))))
   )
+
+(defn supabase-credentials [db]
+  (->> db (select-one! [:supabase (sp/submap [:supabase/email
+                                              :supabase/password
+                                              :supabase/confirm-password])])))
+(reg-sub :sub/supabase-credentials supabase-credentials)
+
+(defn supabase-sign-in-error [db]
+  (->> db (select-one! [:supabase :supabase/sign-in-error])))
+(reg-sub :sub/supabase-sign-in-error supabase-sign-in-error)
+
+(defn supabase-sign-up-error [db]
+  (->> db (select-one! [:supabase :supabase/sign-up-error])))
+(reg-sub :sub/supabase-sign-up-error supabase-sign-up-error)
+
+(defn supabase-user [db]
+  (->> db (select-one! [:supabase :supabase/user])))
+(reg-sub :sub/supabase-user supabase-user)

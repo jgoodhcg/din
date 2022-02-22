@@ -26,7 +26,11 @@
 
 (def supabase
   (-> sp
-      (j/call :createClient supabase-url supabase-anon-key)))
+      (j/call :createClient
+              supabase-url
+              supabase-anon-key
+              (j/lit {:localStorage {:getItem (j/get ss :getItemAsync)
+                                     :setItem (j/get ss :setItemAsync)}}))))
 
 (comment
   (-> supabase
@@ -34,6 +38,7 @@
       (j/call :signUp (j/lit {:email    "jgoodhcg+test1@gmail.com"
                               :password "mysecurepassword"})))
   )
+
 (def writer (transit/writer :json))
 
 (def reader (transit/reader :json))
@@ -111,7 +116,7 @@
           (-> fs (j/call :writeAsStringAsync
                          app-db-file
                          (-> app-db
-                             (dissoc :roam-credentials)
+                             (dissoc :supabase)
                              (->> (transit/write writer)))))))
 
 (comment
@@ -120,28 +125,6 @@
   (go (-> ss (j/call :getItemAsync "roam-credentials") <p! (->> (transit/read reader)) tap>))
   )
 
-(reg-fx :effect/persist-roam-credentials
-        (fn [roam-credentials]
-          (tap> {:location :effect/persist-roam-credentials})
-          (-> ss (j/call :setItemAsync
-                         "roam-credentials"
-                         (->> roam-credentials
-                              (transit/write writer))))))
-
-(reg-fx :effect/load-roam-credentials
-        (fn []
-          (tap> {:location :effect/load-roam-credentials})
-          (go (-> ss
-                  (j/call :getItemAsync "roam-credentials")
-                  <p!
-                  (->> (transit/read reader))
-                  ((fn [{username :roam-credentials/username
-                         password :roam-credentials/password}]
-                     (when (some? username)
-                       (>evt [:event/update-roam-username username]))
-                     (when (some? password)
-                       (>evt [:event/update-roam-password password]))))
-                  ))))
 (reg-fx :effect/load
         (fn []
           (println "load fx ----------------------------------------------------")
@@ -295,7 +278,6 @@
                (j/call :setStatusAsync (j/lit {:rate % :shouldCorrectPitch true}))
                <p!)))
 
-
 (defn <eql-request
   [eql]
   (go
@@ -336,21 +318,6 @@
                                    :stripe.product/images]}]))]
       (>evt [:event/set-stripe-data res]))))
 
-(reg-fx :effect/set-auth-listener
-        (fn []
-          (println "auth listener fx ----------------------------------------------------")
-          (tap> {:location "auth listener fx"})
-          (-> Hub (j/call :listen "auth" (fn [msg]
-                                           (let [event (-> msg (j/get-in [:payload :event]))]
-                                             (when (= "signIn" event)
-                                               (tap> {:location :effect/set-auth-listener
-                                                      :msg      "Signed in, getting stripe data"})
-                                               (go (<! (<load-stripe-data!))))
-                                             (when (= "signOut" event)
-                                               (tap> {:location :effect/set-auth-listener
-                                                      :msg      "Signed out, removing stripe data"})
-                                               (>evt [:event/set-stripe-data nil]))))))))
-
 (comment
   (-> @re-frame.db/app-db :stripe tap>)
   (-> Auth (j/call :signOut))
@@ -361,16 +328,18 @@
           (println "auth listener fx ----------------------------------------------------")
           (tap> {:location :effect/init-for-logged-in-user})
           (go
-            (let [is-logged-in (-> Auth
-                                   (j/call :currentUserInfo)
-                                   <p!
-                                   js->clj
-                                   some?)]
-
-              (when is-logged-in
-                (tap> {:location :effect/init-for-logged-in-user
-                       :msg      "Is logged in, fetching stripe data"})
-                (go (<! (<load-stripe-data!))))))))
+            (let [user (-> supabase
+                           (j/get :auth)
+                           (j/call :user)
+                           (js->clj :keywordize-keys true))]
+              (tap> {:location :effect/init-for-logged-in-user
+                     :user     user})
+              (when (some? user)
+                (go
+                  ;; (<! (<load-stripe-data!))
+                  ;; TODO 2022-02-21 Justin: fetch page titles
+                  (>evt [:event/set-supabase-user user])
+                  ))))))
 
 (reg-fx :effect/load-stripe-data
         (fn []
@@ -419,4 +388,78 @@
       js->clj
       (#(hash-map :x %))
       tap>))
+  )
+
+(reg-fx :effect/supabase-sign-in
+        (fn [{email    :supabase/email
+              password :supabase/password}]
+          (go
+            (let [location :effect/supabase-sign-in
+                  res      (-> supabase
+                            (j/get :auth)
+                            (j/call :signIn (j/lit {:email    email
+                                                    :password password}))
+                            <p!)
+                  error    (-> res (j/get :error) (j/get :message))
+                  user     (-> res (j/get :user) (js->clj :keywordize-keys true))]
+              (tap> (p/map-of error user location))
+              (if (some? error)
+                (>evt [:event/set-sign-in-error error])
+                (do
+                  (>evt [:event/set-sign-in-error nil])
+                  (>evt [:event/set-supabase-user user])
+                  ;; TODO 2022-02-22 Justin: Pop off the navigation stack
+                  (>evt [:event/navigate :screen/feeds])
+                  ))))))
+
+(reg-fx :effect/supabase-sign-up
+        (fn [{email    :supabase/email
+              password :supabase/password}]
+          (go
+            (let [res (-> supabase
+                          (j/get :auth)
+                          (j/call :signUp (j/lit {:email    email
+                                                  :password password}))
+                          <p!)
+                  error    (-> res (j/get :error) (j/get :message))
+                  user     (-> res (j/get :user) (js->clj :keywordize-keys true))]
+              (if (some? error)
+                (>evt [:event/set-sign-up-error error])
+                (do
+                  (>evt [:event/set-sign-up-error nil])
+                  (>evt [:event/set-supabase-user user])
+                  ;; TODO 2022-02-22 Justin: Pop off the navigation stack
+                  (>evt [:event/navigate :screen/feeds])
+                  ))))))
+
+(reg-fx :effect/supabase-sign-out
+        (fn []
+          (go
+            (let [location :effect/supabase-sign-out
+                  res      (-> supabase
+                            (j/get :auth)
+                            (j/call :signOut)
+                            <p!)
+                  error    (-> res (j/get :error) (j/get :message))]
+              (tap> (p/map-of res location)))
+          )
+          )
+        )
+
+(comment
+  (go (-> supabase
+          (j/get :auth)
+          (j/call :signIn {:email    ""
+                           :password ""})
+          <p! println))
+  (go (-> supabase (j/get :auth) (j/call :signOut) <p! println))
+  (-> supabase (j/get :auth) (j/call :user) println)
+  (-> supabase (j/get :auth) (j/call :session) (j/get :access_token) println)
+  (go (-> supabase
+          (j/get :auth)
+          (j/get :api)
+          (j/call :getUser "")
+          <p!
+          println))
+  (>evt [:event/sign-out])
   )

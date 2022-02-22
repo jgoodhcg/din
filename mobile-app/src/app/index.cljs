@@ -30,8 +30,8 @@
    [app.screen.subscription :refer [root] :rename {root subscription-screen}]
    [app.screen.settings :refer [root] :rename {root settings-screen}]
    [app.screen.account :refer [root] :rename {root account-screen}]
-   [app.screen.login :refer [root] :rename {root login-screen}]
-   [app.screen.signup :refer [root] :rename {root signup-screen}]
+   [app.screen.sign-in :refer [root] :rename {root sign-in-screen}]
+   [app.screen.sign-up :refer [root] :rename {root sign-up-screen}]
    ))
 
 (def api-endpoint "https://yabrbam9si.execute-api.us-east-2.amazonaws.com/default/din-page-titles")
@@ -56,7 +56,7 @@
 
 (defn auth-button []
   (r/as-element
-   (let [user nil]
+   (let [user (<sub [:sub/supabase-user])]
      [:> paper/IconButton
       {:icon (if (some? user) "account-check" "account-cancel-outline")
        :on-press #(>evt [:event/navigate :screen/account])}])))
@@ -91,33 +91,44 @@
                             (swap! !route-name-ref merge {:current current-route-name})))}
 
       [:> (navigator) {:header-mode        "none"
-                       :initial-route-name (:screen/account screen-key-name-mapping)
+                       ;; :initial-route-name (:screen/account screen-key-name-mapping)
                        ;; (screen-key->name last-screen) ;; use this for editing a screen quickly without re-navigating on hot reload
                        }
+       ;; Player ;;
+       ;; feeds
        (screen {:name      (:screen/feeds screen-key-name-mapping)
                 :component (wrap-screen feeds-screen)
                 :options   {:headerRight auth-button}})
+       ;; feed
        (screen {:name      (:screen/feed screen-key-name-mapping)
                 :component (wrap-screen feed-screen)
                 :options   {:headerRight auth-button}})
+       ;; feed-item
        (screen {:name      (:screen/feed-item screen-key-name-mapping)
                 :component (wrap-screen feed-item-screen)
                 :options   {:headerRight auth-button}})
+
+       ;; Auth ;;
+       ;; account
+       (screen {:name      (:screen/account screen-key-name-mapping)
+                :component (wrap-screen account-screen)})
+       ;; sign in
+       (screen {:name      (:screen/sign-in screen-key-name-mapping)
+                :component (wrap-screen sign-in-screen)})
+       ;; sign out
+       (screen {:name      (:screen/sign-up screen-key-name-mapping)
+                :component (wrap-screen sign-up-screen)})
+
+       ;; subscription
        (screen {:name      (:screen/subscription screen-key-name-mapping)
                 :component (wrap-screen subscription-screen)
                 :options   {:headerRight auth-button}})
+
+       ;; settings
        (screen {:name      (:screen/settings screen-key-name-mapping)
                 :component (wrap-screen settings-screen)
                 :options   {:headerRight auth-button}})
-       (screen {:name      (:screen/account screen-key-name-mapping)
-                :component (wrap-screen account-screen)
-                :options   {:headerRight auth-button}})
-       (screen {:name      (:screen/login screen-key-name-mapping)
-                :component (wrap-screen login-screen)
-                :options   {:headerRight auth-button}})
-       (screen {:name      (:screen/signup screen-key-name-mapping)
-                :component (wrap-screen signup-screen)
-                :options   {:headerRight auth-button}})]]]))
+       ]]]))
 
 (defn start
   {:dev/after-load true}

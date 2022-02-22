@@ -428,23 +428,6 @@
                :effect/load-stripe-data true}))
 (reg-event-fx :event/go-to-subscription [base-interceptors] go-to-subscription)
 
-(defn persist-roam-credentials [cofx _]
-  (let [roam-credentials (->> cofx (select-one! [:db :roam-credentials]))]
-    (merge cofx {:effect/persist-roam-credentials roam-credentials})))
-(reg-event-fx :event/persist-roam-credentials [base-interceptors] persist-roam-credentials)
-
-(defn update-roam-username [cofx [_ username]]
-  (->> cofx
-       (setval [:db :roam-credentials :roam-credentials/username] username)
-       (merge {:dispatch [:event/persist-roam-credentials]})))
-(reg-event-fx :event/update-roam-username [base-interceptors] update-roam-username)
-
-(defn update-roam-password [cofx [_ password]]
-  (->> cofx
-       (setval [:db :roam-credentials :roam-credentials/password] password)
-       (merge {:dispatch [:event/persist-roam-credentials]})))
-(reg-event-fx :event/update-roam-password [base-interceptors] update-roam-password)
-
 (comment
   (->> @re-frame.db/app-db
        (select-one! [:feeds
@@ -454,4 +437,74 @@
                      sp/FIRST ;; first key val pair
                      sp/LAST  ;; the val portion of that one pair
                      (sp/submap [:feed-item/url :feed-item/playback-position])]))
+  )
+
+(defn sign-in [cofx _]
+  (let [credentials
+        (->> cofx (select-one!
+                   [:db :supabase
+                    (sp/submap [:supabase/email :supabase/password])]))]
+    (merge cofx {:effect/supabase-sign-in credentials})))
+(reg-event-fx :event/sign-in [base-interceptors] sign-in)
+
+(defn sign-up [cofx _]
+  (let [{password :supabase/password
+         confirm-password :supabase/confirm-password
+         :as credentials}
+        (->> cofx (select-one!
+                   [:db :supabase
+                    (sp/submap [:supabase/email
+                                :supabase/password
+                                :supabase/confirm-password])]))]
+    (if (= password confirm-password)
+      (->> cofx (setval [:effect/supabase-sign-up] credentials))
+      (->> cofx (setval [:dispatch] [:event/set-sign-up-error "Passwords don't match"] )))))
+(reg-event-fx :event/sign-up [base-interceptors] sign-up)
+
+(defn sign-out [cofx _]
+  (->> cofx
+       (setval [:db :supabase :supabase/user] nil)
+       (setval [:effect/supabase-sign-out] true)))
+(reg-event-fx :event/sign-out [base-interceptors] sign-out)
+
+(defn set-supabase-email [cofx [_ email]]
+  (->> cofx
+       (setval [:db :supabase :supabase/email] email)
+       (setval [:dispatch] [:event/set-sign-up-error nil])
+       (setval [:dispatch] [:event/set-sign-in-error nil])))
+(reg-event-fx :event/set-supabase-email [base-interceptors] set-supabase-email)
+
+(defn set-supabase-password [cofx [_ password]]
+  (->> cofx
+       (setval [:db :supabase :supabase/password] password)
+       (setval [:dispatch] [:event/set-sign-up-error nil])
+       (setval [:dispatch] [:event/set-sign-in-error nil])))
+(reg-event-fx :event/set-supabase-password [base-interceptors] set-supabase-password)
+
+(defn set-supabase-confirm-password [cofx [_ confirm-password]]
+  (->> cofx
+       (setval [:db :supabase :supabase/confirm-password] confirm-password)
+       (setval [:dispatch] [:event/set-sign-up-error nil])
+       (setval [:dispatch] [:event/set-sign-in-error nil])))
+(reg-event-fx :event/set-supabase-confirm-password [base-interceptors] set-supabase-confirm-password)
+
+(defn set-sign-in-error [cofx [_ error]]
+  (cond->> cofx
+    true          (setval [:db :supabase :supabase/sign-in-error] error)
+    (some? error) (setval [:dispatch] [:event/sign-out])))
+(reg-event-fx :event/set-sign-in-error [base-interceptors] set-sign-in-error)
+
+(defn set-sign-up-error [cofx [_ error]]
+  (cond->> cofx
+    true          (setval [:db :supabase :supabase/sign-up-error] error)
+    (some? error) (setval [:dispatch] [:event/sign-out])))
+(reg-event-fx :event/set-sign-up-error [base-interceptors] set-sign-up-error)
+
+(defn set-supabase-user [db [_ user]]
+  (->> db (setval [:supabase :supabase/user] user)))
+(reg-event-db :event/set-supabase-user [base-interceptors] set-supabase-user)
+
+(comment
+  (->> @re-frame.db/app-db
+       (select [:supabase]))
   )

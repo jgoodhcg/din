@@ -24,8 +24,8 @@
                                        :subscription "Subscription"
                                        :settings     "Settings"
                                        :account      "Account"
-                                       :login        "Login"
-                                       :signup       "Signup"})
+                                       :sign-in      "Sign In"
+                                       :sign-up      "Sign Up"})
 
 (defn screen-key->name [k] (get screen-key-name-mapping k))
 
