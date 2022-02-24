@@ -8,7 +8,8 @@
    ["expo-secure-store" :as ss]
    ["expo-constants" :as expo-constants]
    ["react-native-controlled-mentions" :as cm]
-   ["@supabase/supabase-js" :as sp]
+   ["react-native-url-polyfill/auto"]
+   ["@supabase/supabase-js" :as spb]
 
    [re-frame.core :refer [reg-fx]]
    [applied-science.js-interop :as j]
@@ -16,16 +17,22 @@
    [cljs.core.async.interop :refer [<p!]]
    [cljs-http.client :as http]
    [clojure.edn :as edn]
+   [clojure.set :refer [rename-keys]]
    [cognitect.transit :as transit]
    [potpuri.core :as p]
+   [com.rpl.specter :as sp :refer [transform select]]
    [tick.alpha.api :as t]
 
-   [app.helpers :refer [>evt >evt-sync screen-key-name-mapping millis->str]]
+   [app.helpers :refer [>evt
+                        screen-key-name-mapping
+                        millis->str
+                        key->pg
+                        pg->key]]
    [app.secrets :refer [supabase-url supabase-anon-key]]
    ))
 
 (def supabase
-  (-> sp
+  (-> spb
       (j/call :createClient
               supabase-url
               supabase-anon-key
@@ -323,6 +330,38 @@
   (-> Auth (j/call :signOut))
   )
 
+(defn <get-all-items
+  [table-key]
+  (go
+    (let [item-count (-> supabase
+                         (j/call :from (key->pg table-key))
+                         (j/call :select "*" (j/lit {:count "exact"}))
+                         (j/call :range 0 9)
+                         <p!
+                         (j/get :count))]
+      (loop [start 0
+             end   999
+             items []]
+        (if (-> start (< end))
+          (let [new-items (-> supabase
+                              (j/call :from (key->pg table-key))
+                              (j/call :select "*" (j/lit {:count "exact"}))
+                              (j/call :range start end)
+                              <p!
+                              (j/get :data)
+                              js->clj
+                              (->> (transform [sp/ALL sp/MAP-KEYS] pg->key)))
+                new-start (-> end (+ 1))
+                new-end (-> end (+ 1000) (min item-count))
+                all-items (vec (concat items new-items))]
+            (recur new-start new-end all-items))
+          items)))))
+
+(comment
+  (go (-> :roam/pages <get-all-items <! count tap>))
+  (go (->> :roam/pages <get-all-items <! (select [sp/ALL :node/title]) tap>))
+  )
+
 (reg-fx :effect/init-for-logged-in-user
         (fn []
           (println "auth listener fx ----------------------------------------------------")
@@ -336,8 +375,13 @@
                      :user     user})
               (when (some? user)
                 (go
+                  ;; TODO 2022-02-24 Justin: Get stripe stuff
                   ;; (<! (<load-stripe-data!))
-                  ;; TODO 2022-02-21 Justin: fetch page titles
+                  (>evt [:event/reset-roam-pages
+                         (->> :roam/pages
+                             <get-all-items
+                             <!
+                             (select [sp/ALL :node/title]))])
                   (>evt [:event/set-supabase-user user])
                   ))))))
 
@@ -409,6 +453,7 @@
                   (>evt [:event/set-sign-in-error nil])
                   (>evt [:event/set-supabase-user user])
                   ;; TODO 2022-02-22 Justin: Pop off the navigation stack
+                  ;; TODO 2022-02-24 Justin: init for logged in user
                   (>evt [:event/navigate :screen/feeds])
                   ))))))
 
@@ -429,6 +474,7 @@
                   (>evt [:event/set-sign-up-error nil])
                   (>evt [:event/set-supabase-user user])
                   ;; TODO 2022-02-22 Justin: Pop off the navigation stack
+                  ;; TODO 2022-02-24 Justin: init for logged in user ?
                   (>evt [:event/navigate :screen/feeds])
                   ))))))
 

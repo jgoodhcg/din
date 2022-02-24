@@ -115,7 +115,7 @@
        ;; sign in
        (screen {:name      (:screen/sign-in screen-key-name-mapping)
                 :component (wrap-screen sign-in-screen)})
-       ;; sign out
+       ;; sign up
        (screen {:name      (:screen/sign-up screen-key-name-mapping)
                 :component (wrap-screen sign-up-screen)})
 
