@@ -2,6 +2,7 @@
   (:require
    ["@react-navigation/native" :as nav]
    ["@react-navigation/native-stack" :as rn-stack]
+   ["@react-navigation/bottom-tabs" :as rn-tab]
    ["expo" :as ex]
    ["react" :as react]
    ["react-native" :as rn]
@@ -38,9 +39,15 @@
 
 (def stack (rn-stack/createNativeStackNavigator))
 
-(defn navigator [] (-> stack (j/get :Navigator)))
+(defn stack-navigator [] (-> stack (j/get :Navigator)))
 
-(defn screen [props] [:> (-> stack (j/get :Screen)) props])
+(defn stack-screen [props] [:> (-> stack (j/get :Screen)) props])
+
+(def tab (rn-tab/createBottomTabNavigator))
+
+(defn tab-navigator [] (-> tab (j/get :Navigator)))
+
+(defn tab-screen [props] [:> (-> tab (j/get :Screen)) props])
 
 (defn wrap-screen
   [the-screen]
@@ -64,7 +71,9 @@
 (defn root []
   (let [theme           (<sub [:sub/theme])
         !route-name-ref (clojure.core/atom {})
-        last-screen     (<sub [:sub/last-screen])]
+        last-screen     (<sub [:sub/last-screen])
+        user            (<sub [:sub/supabase-user])
+        is-logged-in    (some? user)]
 
     [:> paper/Provider
      {:theme (case theme
@@ -90,45 +99,77 @@
                               (>evt [:event/save-navigation current-route-name]))
                             (swap! !route-name-ref merge {:current current-route-name})))}
 
-      [:> (navigator) {:header-mode        "none"
-                       ;; :initial-route-name (:screen/account screen-key-name-mapping)
-                       ;; (screen-key->name last-screen) ;; use this for editing a screen quickly without re-navigating on hot reload
-                       }
-       ;; Player ;;
-       ;; feeds
-       (screen {:name      (:screen/feeds screen-key-name-mapping)
-                :component (wrap-screen feeds-screen)
-                :options   {:headerRight auth-button}})
-       ;; feed
-       (screen {:name      (:screen/feed screen-key-name-mapping)
-                :component (wrap-screen feed-screen)
-                :options   {:headerRight auth-button}})
-       ;; feed-item
-       (screen {:name      (:screen/feed-item screen-key-name-mapping)
-                :component (wrap-screen feed-item-screen)
-                :options   {:headerRight auth-button}})
+      [:> (tab-navigator) {:screenOptions {:headerShown false}}
+       (tab-screen {:name "Podcasts"
+                    :options
+                    {:tabBarIcon
+                     (fn [props]
+                       (let [color   (-> props (j/get :color))
+                             focused (-> props (j/get :focused))
+                             size    (-> props (j/get :size))]
+                         (r/as-element [:> paper/IconButton {:icon "rss" :color color}])))}
+                    :component
+                    #(r/as-element
+                      [:> (stack-navigator)
+                       {:header-mode "none"}
+                       (stack-screen {:name      (:screen/feeds screen-key-name-mapping)
+                                      :component (wrap-screen feeds-screen)
+                                      :options   {}})
+                       (stack-screen {:name      (:screen/feed screen-key-name-mapping)
+                                      :component (wrap-screen feed-screen)
+                                      :options   {}})
+                       (stack-screen {:name      (:screen/feed-item screen-key-name-mapping)
+                                      :component (wrap-screen feed-item-screen)
+                                      :options   {}})])})
+       (tab-screen {:name "Account"
+                    :options
+                    {:tabBarIcon
+                     (fn [props]
+                       (let [color   (-> props (j/get :color))
+                             focused (-> props (j/get :focused))
+                             size    (-> props (j/get :size))]
+                         (r/as-element
+                          [:> paper/IconButton
+                           {:icon  (if is-logged-in "account-check" "account-cancel-outline")
+                            :color color
+                            }])))}
+                    :component
+                    #(r/as-element
+                      [:> (stack-navigator)
+                       {:header-mode "none"}
+                       (stack-screen {:name      (:screen/account screen-key-name-mapping)
+                                      :component (wrap-screen account-screen)})
+                       (stack-screen {:name      (:screen/sign-in screen-key-name-mapping)
+                                      :component (wrap-screen sign-in-screen)})
+                       (stack-screen {:name      (:screen/sign-up screen-key-name-mapping)
+                                      :component (wrap-screen sign-up-screen)})])})]
 
-       ;; Auth ;;
-       ;; account
-       (screen {:name      (:screen/account screen-key-name-mapping)
-                :component (wrap-screen account-screen)})
-       ;; sign in
-       (screen {:name      (:screen/sign-in screen-key-name-mapping)
-                :component (wrap-screen sign-in-screen)})
-       ;; sign up
-       (screen {:name      (:screen/sign-up screen-key-name-mapping)
-                :component (wrap-screen sign-up-screen)})
+      ;; [:> (stack-navigator)
+      ;;  {:header-mode "none"
+      ;;   ;; :initial-route-name (:screen/account screen-key-name-mapping)
+      ;;   ;; (screen-key->name last-screen) ;; use this for editing a screen quickly without re-navigating on hot reload
+      ;;   }
+      ;;  ;; Player ;;
+      ;;  ;; feeds
 
-       ;; subscription
-       (screen {:name      (:screen/subscription screen-key-name-mapping)
-                :component (wrap-screen subscription-screen)
-                :options   {:headerRight auth-button}})
+      ;;  ;; feed
 
-       ;; settings
-       (screen {:name      (:screen/settings screen-key-name-mapping)
-                :component (wrap-screen settings-screen)
-                :options   {:headerRight auth-button}})
-       ]]]))
+      ;;  ;; feed-item
+
+
+      ;;  ;; Auth ;;
+      ;;  ;; account
+      ;;         ;; subscription
+      ;;  (stack-screen {:name      (:screen/subscription screen-key-name-mapping)
+      ;;                 :component (wrap-screen subscription-screen)
+      ;;                 :options   {:headerRight auth-button}})
+
+      ;;  ;; settings
+      ;;  (stack-screen {:name      (:screen/settings screen-key-name-mapping)
+      ;;                 :component (wrap-screen settings-screen)
+      ;;                 :options   {:headerRight auth-button}})
+      ;;  ]
+      ]]))
 
 (defn start
   {:dev/after-load true}

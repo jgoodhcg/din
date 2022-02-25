@@ -372,7 +372,8 @@
                            (j/call :user)
                            (js->clj :keywordize-keys true))]
               (tap> {:location :effect/init-for-logged-in-user
-                     :user     user})
+                     :user     user
+                     :session (-> supabase (j/get :auth) (j/call :session))})
               (when (some? user)
                 (go
                   ;; TODO 2022-02-24 Justin: Get stripe stuff
@@ -487,10 +488,8 @@
                             (j/call :signOut)
                             <p!)
                   error    (-> res (j/get :error) (j/get :message))]
-              (tap> (p/map-of res location)))
-          )
-          )
-        )
+              (tap> (p/map-of res location))
+              (-> ss (j/call :deleteItemAsync "supabase.auth.token"))))))
 
 (comment
   (go (-> supabase
