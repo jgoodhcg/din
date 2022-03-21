@@ -364,7 +364,6 @@
 
 (reg-fx :effect/init-for-logged-in-user
         (fn []
-          (println "auth listener fx ----------------------------------------------------")
           (tap> {:location :effect/init-for-logged-in-user})
           (go
             (let [user (-> supabase
@@ -372,8 +371,7 @@
                            (j/call :user)
                            (js->clj :keywordize-keys true))]
               (tap> {:location :effect/init-for-logged-in-user
-                     :user     user
-                     :session (-> supabase (j/get :auth) (j/call :session))})
+                     :user     user})
               (when (some? user)
                 (go
                   ;; TODO 2022-02-24 Justin: Get stripe stuff
@@ -452,7 +450,7 @@
                 (>evt [:event/set-sign-in-error error])
                 (do
                   (>evt [:event/set-sign-in-error nil])
-                  (>evt [:event/set-supabase-user user])
+                  (>evt [:event/init-for-logged-in-user])
                   ;; TODO 2022-02-22 Justin: Pop off the navigation stack
                   ;; TODO 2022-02-24 Justin: init for logged in user
                   (>evt [:event/navigate :screen/feeds])

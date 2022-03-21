@@ -99,10 +99,13 @@
                               (>evt [:event/save-navigation current-route-name]))
                             (swap! !route-name-ref merge {:current current-route-name})))}
 
-      [:> (tab-navigator) {:screenOptions {:headerShown false}}
-       (tab-screen {:name "Podcasts"
+      [:> (tab-navigator) {:initialRouteName "Podcasts-Tab"
+                           :screenOptions {:headerShown false
+                                           :tabBarHideOnKeyboard true}}
+       (tab-screen {:name "Podcasts-Tab"
                     :options
-                    {:tabBarIcon
+                    {:tabBarLabel "Podcasts"
+                     :tabBarIcon
                      (fn [props]
                        (let [color   (-> props (j/get :color))
                              focused (-> props (j/get :focused))
@@ -110,8 +113,8 @@
                          (r/as-element [:> paper/IconButton {:icon "rss" :color color}])))}
                     :component
                     #(r/as-element
-                      [:> (stack-navigator)
-                       {:header-mode "none"}
+                      [:> (stack-navigator) {:initialRouteName (:screen/feed-item screen-key-name-mapping)
+                                             :header-mode "none"}
                        (stack-screen {:name      (:screen/feeds screen-key-name-mapping)
                                       :component (wrap-screen feeds-screen)
                                       :options   {}})
@@ -121,9 +124,10 @@
                        (stack-screen {:name      (:screen/feed-item screen-key-name-mapping)
                                       :component (wrap-screen feed-item-screen)
                                       :options   {}})])})
-       (tab-screen {:name "Account"
+       (tab-screen {:name "Account-Tab"
                     :options
-                    {:tabBarIcon
+                    {:tabBarLabel "Account"
+                     :tabBarIcon
                      (fn [props]
                        (let [color   (-> props (j/get :color))
                              focused (-> props (j/get :focused))

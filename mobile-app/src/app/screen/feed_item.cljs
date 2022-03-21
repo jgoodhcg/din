@@ -30,24 +30,29 @@
 
 (defn my-text-input [{:keys [selected-note]}]
   (let [pages (<sub [:sub/roam-pages])]
-    [:> cm/MentionInput
-     {:style                  (tw "text-gray-50")
-      :text-align             "left"
-      :text-align-vertical    "top"
-      :multi-line             true
-      :number-of-lines        10
-      :placeholder            "Make note here"
-      :placeholder-text-color (:color (tw "text-gray-500"))
-      :value                  (:feed-item-note/text selected-note)
-      :on-change              #(>evt-sync [:event/update-selected-note-text
-                                           {:feed-item-note/text %}])
+    ;; [:> cm/MentionInput
+    ;;  {:style                  (tw "text-gray-50")
+    ;;   :text-align             "left"
+    ;;   :text-align-vertical    "top"
+    ;;   :multi-line             true
+    ;;   :number-of-lines        10
+    ;;   :placeholder            "Make note here"
+    ;;   :placeholder-text-color (:color (tw "text-gray-500"))
+    ;;   :value                  (:feed-item-note/text selected-note)
+    ;;   :on-change              #(>evt-sync [:event/update-selected-note-text
+    ;;                                        {:feed-item-note/text %}])
 
-      :part-types
-      [{:trigger                   "#"
-        :getPlainString            #(-> % (j/get :name) ((fn [s] (str "[[" s "]]"))))
-        :isInsertSpaceAfterMention true
-        :textStyle                 (tw "text-blue-400")
-        :renderSuggestions         (partial page-suggestions pages)}]}]))
+    ;;   :part-types
+    ;;   [{:trigger                   "#"
+    ;;     :getPlainString            #(-> % (j/get :name) ((fn [s] (str "[[" s "]]"))))
+    ;;     :isInsertSpaceAfterMention true
+    ;;     :textStyle                 (tw "text-blue-400")
+    ;;     :renderSuggestions         (partial page-suggestions pages)}]}]
+    [:> rn/View
+     [:> rn/TextInput {:onSelectionChange #(tap> {:selection %})}]
+
+     ]
+    ))
 
 (defn progress-bar [{:keys [progress-width duration-str position-str notes selected-note]}]
   [:> rn/View {:style (tw "mt-2 px-2 h-80")}
@@ -205,4 +210,7 @@
 
             ]
 
-           ]]))]))
+           ]
+          [:> rn/KeyboardAvoidingView {:style {}}
+           [:> paper/Button {:mode "contained"} "I'm a toolbar"]]
+          ]))]))
