@@ -127,7 +127,8 @@
                                 notes
                                 position
                                 selected-note]}] (<sub [:sub/selected-feed-item])
-             playback-rate-menu-visible          (<sub [:sub/playback-rate-menu-visible])]
+             playback-rate-menu-visible          (<sub [:sub/playback-rate-menu-visible])
+             show-add-page-button                (<sub [:sub/display-add-page-button])]
 
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}
@@ -184,11 +185,11 @@
                                :on-dismiss #(>evt [:event/set-playback-rate-menu-visible false])
                                :anchor
                                (r/as-element
-                                 [:> paper/Button
-                                  {:mode     "text" :icon "play-speed"
-                                   :color    (-> props (j/get :theme) (j/get :colors) (j/get :text))
-                                   :on-press #(>evt [:event/set-playback-rate-menu-visible true])}
-                                  (str playback-rate "x")])}
+                                [:> paper/Button
+                                 {:mode     "text" :icon "play-speed"
+                                  :color    (-> props (j/get :theme) (j/get :colors) (j/get :text))
+                                  :on-press #(>evt [:event/set-playback-rate-menu-visible true])}
+                                 (str playback-rate "x")])}
                 [rate-menu-item {:feed-id feed-id :rate 0.50}]
                 [rate-menu-item {:feed-id feed-id :rate 0.75}]
                 [rate-menu-item {:feed-id feed-id :rate 1.00}]
@@ -205,12 +206,10 @@
                                                                          :feed-item/id            id
                                                                          :feed-item-note/position position
                                                                          :feed-item-note/text     ""}])}
-                "Add note"]])
+                "Add note"]])]]
 
+          (when show-add-page-button
+            [:> rn/KeyboardAvoidingView {:style {}}
+             [:> paper/Button {:mode "contained"} "[[  ]]"]])
 
-            ]
-
-           ]
-          [:> rn/KeyboardAvoidingView {:style {}}
-           [:> paper/Button {:mode "contained"} "I'm a toolbar"]]
           ]))]))

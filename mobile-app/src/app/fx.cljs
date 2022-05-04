@@ -506,3 +506,16 @@
           println))
   (>evt [:event/sign-out])
   )
+
+(reg-fx :effect/set-keyboard-listener
+        (fn []
+          (-> rn/Keyboard (j/call :addListener "keyboardDidShow"
+                                  (fn [_] (>evt [:event/set-keyboard-showing true]))))
+          (-> rn/Keyboard (j/call :addListener "keyboardDidHide"
+                                  (fn [_] (>evt [:event/set-keyboard-showing false]))))))
+
+(comment
+  (def test-listener
+    (-> rn/Keyboard (j/call :addListener "keyboardDidShow"
+                            (fn [x] (tap> {:x x :showing true})))))
+  )

@@ -53,6 +53,7 @@
                    :modals     {:modal/feed-add    {:feed-add/visible boolean?}
                                 :modal/feed-remove {:feed-remove/id (ds/maybe uuid?)}}
                    :menus      {:menu/playback-rate {:playback-rate/visible boolean?}}
+                   :misc       {:misc/keyboard-showing boolean?}
                    :selected   {:selected-feed/id                    (ds/maybe uuid?)
                                 :selected-feed/item-id               (ds/maybe string?)
                                 :selected-feed/item-status           (ds/maybe (s/spec #{:status/playing
@@ -115,6 +116,7 @@
    :modals     {:modal/feed-add    {:feed-add/visible false}
                 :modal/feed-remove {:feed-remove/id nil}}
    :menus      {:menu/playback-rate {:playback-rate/visible false}}
+   :misc       {:misc/keyboard-showing false}
    :selected   {:selected-feed/id                    nil
                 :selected-feed/item-id               nil
                 :selected-feed/item-status           nil

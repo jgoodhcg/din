@@ -249,3 +249,15 @@
 (defn supabase-user [db]
   (->> db (select-one! [:supabase :supabase/user])))
 (reg-sub :sub/supabase-user supabase-user)
+
+(defn keyboard-showing [db]
+  (->> db (select-one! [:misc :misc/keyboard-showing])))
+(reg-sub :sub/keyboard-showing keyboard-showing)
+
+(defn display-add-page-button
+  [[selected-note-id keyboard-showing] _]
+  (and (some? selected-note-id) (boolean keyboard-showing)))
+(reg-sub :sub/display-add-page-button
+         :<- [:sub/selected-feed-item-selected-note-id]
+         :<- [:sub/keyboard-showing]
+         display-add-page-button)

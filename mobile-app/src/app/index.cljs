@@ -113,7 +113,8 @@
                          (r/as-element [:> paper/IconButton {:icon "rss" :color color}])))}
                     :component
                     #(r/as-element
-                      [:> (stack-navigator) {:initialRouteName (:screen/feed-item screen-key-name-mapping)
+                      [:> (stack-navigator) {
+                                            ;; :initialRouteName (:screen/feed-item screen-key-name-mapping)
                                              :header-mode "none"}
                        (stack-screen {:name      (:screen/feeds screen-key-name-mapping)
                                       :component (wrap-screen feeds-screen)
@@ -161,6 +162,7 @@
       ;;  ;; feed-item
 
 
+
       ;;  ;; Auth ;;
       ;;  ;; account
       ;;         ;; subscription
@@ -192,6 +194,7 @@
   (>evt-sync [:event/initialize-db])
   (>evt [:event/trigger-load-db])
   (>evt [:event/set-auth-listener])
+  (>evt [:event/set-keyboard-listener])
   (start))
 
 (comment

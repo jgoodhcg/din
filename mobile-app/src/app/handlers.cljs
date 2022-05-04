@@ -46,7 +46,8 @@
                                       :effects
                                       :db))))))
 
-(def base-interceptors  [persist
+(def base-interceptors  [
+                         ;; persist
                          ;; (when ^boolean goog.DEBUG debug) ;; use this for some verbose re-frame logging
                          spec-validation])
 
@@ -503,6 +504,15 @@
 (defn set-supabase-user [db [_ user]]
   (->> db (setval [:supabase :supabase/user] user)))
 (reg-event-db :event/set-supabase-user [base-interceptors] set-supabase-user)
+
+(defn set-keyboard-listener [cofx _]
+ (println "setting keyboard listener ----------------------------")
+  (merge cofx {:effect/set-keyboard-listener true}))
+(reg-event-fx :event/set-keyboard-listener [base-interceptors] set-keyboard-listener)
+
+(defn set-keyboard-showing [db [_ is-showing]]
+  (->> db (setval [:misc :misc/keyboard-showing] is-showing)))
+(reg-event-db :event/set-keyboard-showing [base-interceptors] set-keyboard-showing)
 
 (comment
   (->> @re-frame.db/app-db
