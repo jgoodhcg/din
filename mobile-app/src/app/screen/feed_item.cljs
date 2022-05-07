@@ -9,7 +9,9 @@
    [reagent.core :as r]
    [potpuri.core :as p]
 
-   [app.helpers :refer [<sub >evt >evt-sync tw]]))
+   [app.helpers :refer [<sub >evt >evt-sync tw]]
+
+   [clojure.string :as s]))
 
 (defn page-suggestions [pages e]
   (let [on-suggest  (-> e (j/get :onSuggestionPress))
@@ -28,6 +30,28 @@
                 :title    title
                 :on-press #(on-suggest #js {:id (str (random-uuid)) :name title})}])])]))))
 
+(def my-ref (atom nil))
+
+(comment
+  (-> @my-ref
+      ;; js/Object.keys ;; => #js ["_nativeTag" "_children" "viewConfig" "_internalFiberInstanceHandleDEV" "clear" "isFocused" "getNativeRef"]
+      (j/get :viewConfig)
+      (j/get :NativeProps)
+      (j/get :selection)
+      )
+    )
+
+(comment
+  (-> "a [[]] b ] [c [["
+      ((fn [text]
+         (loop [from 0
+                indexes []]
+           (let [i (s/index-of text "[[" from)]
+             (if (nil? i)
+               indexes
+               (recur (-> i (+ 1)) (-> indexes (conj i)))))
+           ))))
+  )
 (defn my-text-input [{:keys [selected-note]}]
   (let [pages (<sub [:sub/roam-pages])]
     ;; [:> cm/MentionInput
@@ -49,7 +73,16 @@
     ;;     :textStyle                 (tw "text-blue-400")
     ;;     :renderSuggestions         (partial page-suggestions pages)}]}]
     [:> rn/View
-     [:> rn/TextInput {:onSelectionChange #(tap> {:selection %})}]
+     [:> rn/TextInput {:onSelectionChange
+                       #(>evt [:event/set-note-selection
+                               (let [selection (-> %
+                                                   (j/get :nativeEvent)
+                                                   (j/get :selection))
+                                     start     (-> selection (j/get :start))
+                                     end       (-> selection (j/get :end))]
+                                 {:note-selection/start start
+                                  :note-selection/end   end})])
+                       :ref #(reset! my-ref %)}]
 
      ]
     ))

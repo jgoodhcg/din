@@ -514,7 +514,13 @@
   (->> db (setval [:misc :misc/keyboard-showing] is-showing)))
 (reg-event-db :event/set-keyboard-showing [base-interceptors] set-keyboard-showing)
 
+(defn set-note-selection [db [_ {start :note-selection/start
+                                 end   :note-selection/end}]]
+  (->> db (setval [:misc :misc/note-selection] {:note-selection/start start
+                                                 :note-selection/end   end})))
+(reg-event-db :event/set-note-selection [base-interceptors] set-note-selection)
+
 (comment
   (->> @re-frame.db/app-db
-       (select [:supabase]))
+       (select [:misc]))
   )
