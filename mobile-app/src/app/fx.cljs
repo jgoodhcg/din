@@ -36,8 +36,9 @@
       (j/call :createClient
               supabase-url
               supabase-anon-key
-              (j/lit {:localStorage {:getItem (j/get ss :getItemAsync)
-                                     :setItem (j/get ss :setItemAsync)}}))))
+              (j/lit {:localStorage {:getItem    (j/get ss :getItemAsync)
+                                     :setItem    (j/get ss :setItemAsync)
+                                     :removeItem (j/get ss :deleteItemAsync)}}))))
 
 (comment
   (-> supabase

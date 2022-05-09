@@ -266,6 +266,8 @@
                                           text     :feed-item-note/text
                                           position :feed-item-note/position
                                           :as      args}]]
+  (tap> {:location :event/add-note
+         :args args})
   {:db (->> db (setval [:feeds (sp/keypath feed-id)
                         :feed/items (sp/keypath item-id)
                         :feed-item/notes (sp/keypath new-uuid)]
@@ -280,7 +282,10 @@
 
 (defn select-note [db [_ {feed-id :feed/id
                           item-id :feed-item/id
-                          note-id :feed-item-note/id}]]
+                          note-id :feed-item-note/id
+                          :as args}]]
+  {:location :event/select-note
+   :args args}
   (->> db (transform [:selected] #(merge % {:selected-feed/id                    feed-id
                                             :selected-feed/item-id               item-id
                                             :selected-feed/item-selected-note-id note-id}))))
@@ -522,5 +527,6 @@
 
 (comment
   (->> @re-frame.db/app-db
-       (select [:misc]))
+       (select [:misc])
+       tap>)
   )

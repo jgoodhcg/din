@@ -2,7 +2,8 @@
   (:require [re-frame.core :refer [reg-sub]]
             [com.rpl.specter :as sp :refer [select-one! select transform]]
             [app.helpers :refer [millis->str percent-of-duration]]
-            [potpuri.core :as p]))
+            [potpuri.core :as p]
+            [clojure.string :as s]))
 
 (defn version [db _]
   (->> db
@@ -251,7 +252,8 @@
 (reg-sub :sub/supabase-user supabase-user)
 
 (defn keyboard-showing [db]
-  (->> db (select-one! [:misc :misc/keyboard-showing])))
+  (->> db (select-one! [:misc :misc/keyboard-showing]))
+  )
 (reg-sub :sub/keyboard-showing keyboard-showing)
 
 (defn display-add-page-button
@@ -261,3 +263,77 @@
          :<- [:sub/selected-feed-item-selected-note-id]
          :<- [:sub/keyboard-showing]
          display-add-page-button)
+
+(defn note-selection [db]
+  (->> db (select-one! [:misc :misc/note-selection])))
+(reg-sub :sub/note-selection note-selection)
+
+(comment
+  ;; TODO this stuff should use regex
+  (defn indexes-within-brackets
+    "Returns a set with all indexes between brackets.
+   Example: #{2 8 9 10 11 12 13 14 15 16 17} from \"[[a]] [[ [[b/[[c]]]] [[\""
+    [text]
+    (loop [from    0
+           indexes #{}]
+      (let [open-start   (s/index-of text "[[" from)
+            closed-start (s/index-of text "]]" open-start)
+            next-open    (s/index-of text "[[" (-> open-start (+ 2)))]
+        (cond
+          (and (some? open-start)
+               (some? closed-start)
+               (-> closed-start (< maybe-invalid-close)))
+          (let [begin       (-> open-start (+ 2))
+                new-indexes (->> (range begin closed-start)
+                                 vec
+                                 (conj indexes))
+                new-from    (-> closed-start (+ 2))]
+            (recur new-from new-indexes))
+
+          (some? maybe-invalid-close)
+          (recur maybe-invalid-close indexes)
+
+          :else
+          indexes))))
+  (indexes-within-brackets "[[a b]] [[ [[c d e f]]"))
+
+(comment
+  (defn is-selection-within-brackets?
+    [note-text selection-start]
+    (let [note-text-reversed ()])
+    )
+
+  (is-selection-within-brackets?
+   "[[a]] [[ [[b/[[c]]]] [[" 4)
+
+  (defn suggested-roam-pages
+    [[note-selection roam-pages selected-feed-item]]
+    (let []
+      )
+    )
+  (reg-sub :sub/suggested-roam-pages
+           :<- [:sub/note-selection]
+           :<- [:sub/roam-pages]
+           :<- [:sub/selected-feed-item]
+           suggested-roam-pages))
+
+(comment
+  (-> "a [[]] b ] [c [[ [[sjsjsjs]]"
+      ((fn [text]
+         (loop [from    0
+                indexes []]
+           (let [open-start   (s/index-of text "[[" from)
+                 closed-start (s/index-of text "]]" open-start)]
+             (if (and (some? open-start)
+                      (some? closed-start))
+               (let [begin       (-> open-start (+ 2))
+                     new-from    (-> closed-start (+ 2))
+                     new-indexes (->> (range begin (-> closed-start (+ 1)))
+                                      vec
+                                      (conj indexes))]
+                 (recur new-from new-indexes))
+               indexes))))))
+  (s/index-of "[[a]]s" "a" 2)
+  (->> (range 0 3) vec (conj []))
+  (concat '(0 1 2 3))
+  )

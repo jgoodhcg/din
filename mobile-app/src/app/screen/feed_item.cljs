@@ -235,10 +235,11 @@
 
                ;; add note
                [:> paper/Button {:mode     "contained" :icon "note"
-                                 :on-press #(>evt-sync [:event/add-note {:feed/id                 feed-id
-                                                                         :feed-item/id            id
-                                                                         :feed-item-note/position position
-                                                                         :feed-item-note/text     ""}])}
+                                 :on-press #(>evt [:event/add-note
+                                                   {:feed/id                 feed-id
+                                                    :feed-item/id            id
+                                                    :feed-item-note/position position
+                                                    :feed-item-note/text     ""}])}
                 "Add note"]])]]
 
           (when show-add-page-button
