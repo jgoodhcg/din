@@ -80,8 +80,10 @@
                                                    (j/get :selection))
                                      start     (-> selection (j/get :start))
                                      end       (-> selection (j/get :end))]
+                                 (tap> {:note-selection/start start
+                                   :note-selection/end   end})
                                  {:note-selection/start start
-                                  :note-selection/end   end})])
+                                   :note-selection/end   end})])
                        :ref #(reset! my-ref %)}]
 
      ]
