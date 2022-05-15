@@ -454,7 +454,7 @@
                   (>evt [:event/init-for-logged-in-user])
                   ;; TODO 2022-02-22 Justin: Pop off the navigation stack
                   ;; TODO 2022-02-24 Justin: init for logged in user
-                  (>evt [:event/navigate :screen/feeds])
+                  (>evt [:event/navigate :screen/account])
                   ))))))
 
 (reg-fx :effect/supabase-sign-up
@@ -506,6 +506,22 @@
           <p!
           println))
   (>evt [:event/sign-out])
+
+  ;; password recovery
+  ;; use supabase console to send user recovery email
+  ;; take accessToken from email link redirect and use here in :setAuth
+  (go (-> supabase
+          (j/get :auth)
+          (j/call :setAuth "")
+          <p!
+          println))
+
+  ;; once authenticated with recovery access token reset password with this
+  (go (-> supabase
+          (j/get :auth)
+          (j/call :update (j/lit {:password ""}))
+          <p!
+          println))
   )
 
 (reg-fx :effect/set-keyboard-listener

@@ -52,42 +52,27 @@
                (recur (-> i (+ 1)) (-> indexes (conj i)))))
            ))))
   )
+
 (defn my-text-input [{:keys [selected-note]}]
-  (let [pages (<sub [:sub/roam-pages])]
-    ;; [:> cm/MentionInput
-    ;;  {:style                  (tw "text-gray-50")
-    ;;   :text-align             "left"
-    ;;   :text-align-vertical    "top"
-    ;;   :multi-line             true
-    ;;   :number-of-lines        10
-    ;;   :placeholder            "Make note here"
-    ;;   :placeholder-text-color (:color (tw "text-gray-500"))
-    ;;   :value                  (:feed-item-note/text selected-note)
-    ;;   :on-change              #(>evt-sync [:event/update-selected-note-text
-    ;;                                        {:feed-item-note/text %}])
+  [:> rn/View
+     [:> rn/TextInput
+      {:onSelectionChange
+       #(>evt [:event/set-note-selection
+               (let [selection (-> %
+                                   (j/get :nativeEvent)
+                                   (j/get :selection))
+                     start     (-> selection (j/get :start))
+                     end       (-> selection (j/get :end))]
+                 (tap> {:note-selection/start start
+                        :note-selection/end   end})
+                 {:note-selection/start start
+                  :note-selection/end   end})])
+       :ref            #(reset! my-ref %)
+       :default-value  (:feed-item-note/text selected-note)
+       :on-change-text #(>evt [:event/update-selected-note-text
+                               {:feed-item-note/text %}])}]
 
-    ;;   :part-types
-    ;;   [{:trigger                   "#"
-    ;;     :getPlainString            #(-> % (j/get :name) ((fn [s] (str "[[" s "]]"))))
-    ;;     :isInsertSpaceAfterMention true
-    ;;     :textStyle                 (tw "text-blue-400")
-    ;;     :renderSuggestions         (partial page-suggestions pages)}]}]
-    [:> rn/View
-     [:> rn/TextInput {:onSelectionChange
-                       #(>evt [:event/set-note-selection
-                               (let [selection (-> %
-                                                   (j/get :nativeEvent)
-                                                   (j/get :selection))
-                                     start     (-> selection (j/get :start))
-                                     end       (-> selection (j/get :end))]
-                                 (tap> {:note-selection/start start
-                                   :note-selection/end   end})
-                                 {:note-selection/start start
-                                   :note-selection/end   end})])
-                       :ref #(reset! my-ref %)}]
-
-     ]
-    ))
+     ])
 
 (defn progress-bar [{:keys [progress-width duration-str position-str notes selected-note]}]
   [:> rn/View {:style (tw "mt-2 px-2 h-80")}
@@ -163,7 +148,8 @@
                                 position
                                 selected-note]}] (<sub [:sub/selected-feed-item])
              playback-rate-menu-visible          (<sub [:sub/playback-rate-menu-visible])
-             show-add-page-button                (<sub [:sub/display-add-page-button])]
+             show-add-page-button                (<sub [:sub/display-add-page-button])
+             suggestions                         (<sub [:sub/suggested-roam-pages])]
 
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}
@@ -244,8 +230,13 @@
                                                     :feed-item-note/text     ""}])}
                 "Add note"]])]]
 
-          (when show-add-page-button
+          (when (and show-add-page-button
+                     (nil? suggestions))
             [:> rn/KeyboardAvoidingView {:style {}}
              [:> paper/Button {:mode "contained"} "[[  ]]"]])
+
+          (when (some? suggestions)
+            [:> rn/KeyboardAvoidingView {:style {}}
+             [:> paper/Text (-> suggestions first)]])
 
           ]))]))

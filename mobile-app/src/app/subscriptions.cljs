@@ -374,7 +374,7 @@
              i cursor-pos]
         (println (p/map-of maybe-link-text i))
         (if (and (keyword? maybe-link-text)
-                 (-> i (< (-> grouped-indexes keys count))))
+                 (-> i (<= (-> grouped-indexes keys count))))
           (recur (-> grouped-indexes (get i) first :x) (+ 1 i))
           maybe-link-text)))))
 
