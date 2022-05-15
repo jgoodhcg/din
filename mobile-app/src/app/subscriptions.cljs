@@ -418,69 +418,87 @@
         [:text-run " "]
         [:text-run "[["]]
 
-   (clojure.walk/postwalk
-    (fn [x]
-      (cond
-        (and (vector? x) (= :page-link (first x))) (conj x :page-link-close)
-        :else                                      x)))
+       ;; close page links
+       (clojure.walk/postwalk
+        (fn [x]
+          (cond
+            (and (vector? x) (= :page-link (first x))) (conj x :page-link-close)
+            :else                                      x)))
 
-   (#(do (cljs.pprint/pprint %) %))
+       #_(#(do (cljs.pprint/pprint %) %))
 
-   ((fn [ast]
-      (let [counter (atom {:i 0 :in-page false})
-            acc     (atom [{:i 0 :in-page false}])]
-        (->> ast
-             (clojure.walk/postwalk
-              (fn [x]
-                (cond
-                  (keyword? x)
-                  (case x
-                    :page-link
-                    (do (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
-                        (swap! acc conj @counter)
-                        (swap! counter (fn [c] (-> c (update :i inc) (assoc :in-page true :x x))))
-                        (swap! acc conj @counter)
-                        nil)
-
-                    :page-link-close
-                    (do (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
-                        (swap! acc conj @counter)
-                        (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
-                        (swap! acc conj @counter)
-                        nil)
-
-                    :text-or  nil
-                    :text-run (when (-> @acc last :x (= :page-link-close))
-                                (swap! counter (fn [c] (-> c (assoc :in-page false))))
-                                (swap! acc
-                                       (fn [a]
-                                         (let [last-two
-                                               (-> a
-                                                   (subvec (-> a count (- 2)))
-                                                   (->> (mapv #(assoc % :in-page false))))]
-                                           (-> a
-                                               butlast
-                                               butlast
-                                               (concat last-two)
-                                               vec))))))
-
-                  (string? x)
-                  (do
-                    (loop [n 1]
-                      (if (-> n (> (count x)))
-                        nil
-                        (do (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x :n n))))
+       ;; build index list
+       ((fn [ast]
+          (let [counter (atom {:i 0 :in-page false})
+                acc     (atom [{:i 0 :in-page false}])]
+            (->> ast
+                 (clojure.walk/postwalk
+                  (fn [x]
+                    (cond
+                      (keyword? x)
+                      (case x
+                        :page-link
+                        (do (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
                             (swap! acc conj @counter)
-                            (recur (-> n (+ 1))))))
-                    (swap! counter #(dissoc % :n))
-                    nil)
+                            (swap! counter (fn [c] (-> c (update :i inc) (assoc :in-page true :x x))))
+                            (swap! acc conj @counter)
+                            nil)
 
-                  :else nil))))
-        @acc)))
+                        :page-link-close
+                        (do (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
+                            (swap! acc conj @counter)
+                            (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
+                            (swap! acc conj @counter)
+                            nil)
 
-   (#(do (cljs.pprint/pprint %) %))
+                        :text-or  nil
+                        :text-run (when (-> @acc last :x (= :page-link-close))
+                                    (swap! counter (fn [c] (-> c (assoc :in-page false))))
+                                    (swap! acc
+                                           (fn [a]
+                                             (let [last-two
+                                                   (-> a
+                                                       (subvec (-> a count (- 2)))
+                                                       (->> (mapv #(assoc % :in-page false))))]
+                                               (-> a
+                                                   butlast
+                                                   butlast
+                                                   (concat last-two)
+                                                   vec))))))
 
-   )
+                      (string? x)
+                      (do
+                        (loop [n 1]
+                          (if (-> n (> (count x)))
+                            nil
+                            (do (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x :n n))))
+                                (swap! acc conj @counter)
+                                (recur (-> n (+ 1))))))
+                        (swap! counter #(dissoc % :n))
+                        nil)
+
+                      :else nil))))
+            @acc)))
+
+       #_(#(do (cljs.pprint/pprint %) %))
+
+       (group-by :i)
+
+       #_(#(do (cljs.pprint/pprint %) %))
+
+       ;; determine text
+       ((fn [grouped]
+          (let [pos 14
+                {:keys [in-page x]} (-> grouped (get pos) first)]
+            (when in-page
+              (loop [maybe-link-text x
+                     i pos]
+                (println (p/map-of maybe-link-text i))
+                (if (and (keyword? maybe-link-text)
+                         (-> i (< (-> grouped keys count))))
+                  (recur (-> grouped (get i) first :x) (+ 1 i))
+                  maybe-link-text))))))
+       )
 )
 
 (println "-------------------")
