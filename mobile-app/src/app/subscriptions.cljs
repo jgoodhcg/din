@@ -1,10 +1,16 @@
 (ns app.subscriptions
-  (:require [re-frame.core :refer [reg-sub]]
+  (:require ["fuzzy" :as fuzzy]
+
+            [clojure.string :as s]
+            [clojure.walk :refer [postwalk]]
+
             [com.rpl.specter :as sp :refer [select-one! select transform]]
-            [app.helpers :refer [millis->str percent-of-duration]]
             [instaparse.core :as insta :refer-macros [defparser]]
             [potpuri.core :as p]
-            [clojure.string :as s]))
+            [re-frame.core :refer [reg-sub]]
+
+            [app.helpers :refer [millis->str percent-of-duration]]
+            [applied-science.js-interop :as j]))
 
 (defn version [db _]
   (->> db
@@ -269,107 +275,7 @@
   (->> db (select-one! [:misc :misc/note-selection])))
 (reg-sub :sub/note-selection note-selection)
 
-(comment
-  (defn is-selection-within-brackets?
-    [text pos]
-    (println (p/map-of text pos))
-    (let [result
-          (if (-> pos (>= 2))
-            (let [open                 (-> text (s/last-index-of "[[" (-> pos (- 1))))
-                  maybe-breaking-close (-> text (s/last-index-of "]]" (-> pos (- 1))))]
-              (println (p/map-of open maybe-breaking-close))
-              (if (and (some? open)
-                       (-> open (>= maybe-breaking-close))
-                       (-> open (< (-> pos (- 1)))))
-                (loop [p pos]
-                  (let [open-along-the-way (-> text (s/index-of "[[" p))
-                        maybe-close        (-> text (s/index-of "]]" p))]
-                    (println (p/map-of p open-along-the-way maybe-close))
-                    (cond
-                      (nil? maybe-close) false
-                      (-> maybe-close (< open-along-the-way)) true
-                      :else (recur (-> open-along-the-way (+ 2))))))
-                false))
-            false)]
-
-      (println "----------------")
-      result))
-
-  ;; (defn tester [i result] (println))
-  (and
-   (not (is-selection-within-brackets? "[[a]] [[ [[b/[[c]]]] [[" 0))
-   (not (is-selection-within-brackets? "[[a]] [[ [[b/[[c]]]] [[" 1))
-   (is-selection-within-brackets? "[[a]] [[ [[b/[[c]]]] [[" 2)
-   (is-selection-within-brackets? "[[a]] [[ [[b/[[c]]]] [[" 3)
-   (not (is-selection-within-brackets? "[[a]] [[ [[b/[[c]]]] [[" 4))
-   (not (is-selection-within-brackets? "[[a]] [[ [[b/[[c]]]] [[" 5))
-   (not (is-selection-within-brackets? "[[a]] [[ [[b/[[c]]]] [[" 6))
-   (not (is-selection-within-brackets? "[[a]] [[ [[b/[[c]]]] [[" 7))
-   (is-selection-within-brackets? "[[a]] [[ [[b/[[c]]]] [[" 8)
-   (is-selection-within-brackets? "[[a]] [[ [[b/[[c]]]] [[" 9)
-   (is-selection-within-brackets? "[[a]] [[ [[b/[[c]]]] [[" 10)
-   (is-selection-within-brackets? "[[a]] [[ [[b/[[c]]]] [[" 18)
-   (not (is-selection-within-brackets? "[[a]] [[ [[b/[[c]]]] [[" 19))
-
-   )
-
-  (defn suggested-roam-pages
-    [[note-selection roam-pages selected-feed-item]]
-    (let []))
-
-  (reg-sub :sub/suggested-roam-pages
-           :<- [:sub/note-selection]
-           :<- [:sub/roam-pages]
-           :<- [:sub/selected-feed-item]
-           suggested-roam-pages))
-
-(defparser structure-parser
-  "text-or = ( code-block /
-               code-span /
-               page-link /
-               braced-hashtag /
-               naked-hashtag /
-               block-ref /
-               typed-block-ref /
-               text-run )*
-   (* below we need to list all significant groups in lookbehind + $ *)
-   text-run = #'.+?(?=(\\[\\[|\\]\\]|#|\\(\\(|\\)\\)|$|\\`))\\n?'
-   code-span = < '`' > text-or < '`' >
-   code-block = < '```' >
-                ( text-or | '\\n' )+
-                < '```' >
-   page-link = < double-square-open >
-               ( text-till-double-square-close /
-                 page-link /
-                 braced-hashtag /
-                 naked-hashtag )+
-               < double-square-close >
-   naked-hashtag = < hash > #'[^\\ \\+\\!\\@\\#\\$\\%\\^\\&\\*\\(\\)\\?\\\"\\;\\:\\]\\[]+'
-   braced-hashtag = < hash double-square-open >
-                    ( text-till-double-square-close /
-                      page-link /
-                      braced-hashtag /
-                      naked-hashtag)+
-                    < double-square-close >
-   block-ref = < double-paren-open >
-               text-till-double-paren-close
-               < double-paren-close >
-   < text-till-double-square-close > = #'[^\\n$\\[\\]\\#]+?(?=(\\]\\]|\\[\\[|#))'
-   < text-till-double-paren-close > = #'[^\\s]+?(?=(\\)\\)))'
-   typed-block-ref = < double-curly-open >
-                     ref-type < #':\\s*' > block-ref
-                     < double-curly-close >
-   ref-type = #'[^:]+'
-   hash = '#'
-   double-square-open = '[['
-   double-square-close = ']]'
-   double-paren-open = '(('
-   double-paren-close = '))'
-   double-curly-open = '{{'
-   double-curly-close = '}}'")
-
 (defparser my-parser
- ;; "S = #'\\[\\[(.*?)\\]\\]'+"
   "text-or = ( page-link /
                braced-hashtag /
                naked-hashtag /
@@ -396,109 +302,110 @@
 
   )
 
-(comment
-
-  (let [parse-result (insta/parse structure-parser "[[a]] [[ [[b/[[c]]]] [[" :total :true)]
-    (println parse-result))
-
-  (insta/parse my-parser "[[a]] [[ [[b/[[c]]]] [[" :total :true)
-  #_[:text-or
-    [:page-link "a"]
-    [:text-run " "]
-    [:text-run "[[ "]
-    [:page-link "b/" [:page-link "c"]]
-    [:text-run " "]
-    [:text-run "[["]]
-
-  (->> [:text-or
-        [:page-link "a"]
-        [:text-run " "]
-        [:text-run "[[ "]
-        [:page-link "b/" [:page-link "c"]]
-        [:text-run " "]
-        [:text-run "[["]]
-
-       ;; close page links
-       (clojure.walk/postwalk
+(defn add-closing-page-links
+  [ast]
+  (->> ast
+       (postwalk
         (fn [x]
           (cond
-            (and (vector? x) (= :page-link (first x))) (conj x :page-link-close)
-            :else                                      x)))
+            (and (vector? x) (= :page-link (first x)))
+            (conj x :page-link-close)
 
-       #_(#(do (cljs.pprint/pprint %) %))
+            :else x)))))
 
-       ;; build index list
-       ((fn [ast]
-          (let [counter (atom {:i 0 :in-page false})
-                acc     (atom [{:i 0 :in-page false}])]
-            (->> ast
-                 (clojure.walk/postwalk
-                  (fn [x]
-                    (cond
-                      (keyword? x)
-                      (case x
-                        :page-link
-                        (do (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
-                            (swap! acc conj @counter)
-                            (swap! counter (fn [c] (-> c (update :i inc) (assoc :in-page true :x x))))
-                            (swap! acc conj @counter)
-                            nil)
+(defn build-index
+  [ast]
+  (let [counter (atom {:i 0 :in-page false})
+        acc     (atom [{:i 0 :in-page false}])]
+    (->> ast
+         (postwalk
+          (fn [x]
+            (cond
+              (keyword? x)
+              (case x
+                :page-link
+                (do (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
+                    (swap! acc conj @counter)
+                    (swap! counter (fn [c] (-> c (update :i inc) (assoc :in-page true :x x))))
+                    (swap! acc conj @counter)
+                    nil)
 
-                        :page-link-close
-                        (do (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
-                            (swap! acc conj @counter)
-                            (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
-                            (swap! acc conj @counter)
-                            nil)
+                :page-link-close
+                (do (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
+                    (swap! acc conj @counter)
+                    (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
+                    (swap! acc conj @counter)
+                    nil)
 
-                        :text-or  nil
-                        :text-run (when (-> @acc last :x (= :page-link-close))
-                                    (swap! counter (fn [c] (-> c (assoc :in-page false))))
-                                    (swap! acc
-                                           (fn [a]
-                                             (let [last-two
-                                                   (-> a
-                                                       (subvec (-> a count (- 2)))
-                                                       (->> (mapv #(assoc % :in-page false))))]
-                                               (-> a
-                                                   butlast
-                                                   butlast
-                                                   (concat last-two)
-                                                   vec))))))
+                :text-or  nil
+                :text-run (when (-> @acc last :x (= :page-link-close))
+                            (swap! counter (fn [c] (-> c (assoc :in-page false))))
+                            (swap! acc
+                                   (fn [a]
+                                     (let [last-two
+                                           (-> a
+                                               (subvec (-> a count (- 2)))
+                                               (->> (mapv #(assoc % :in-page false))))]
+                                       (-> a
+                                           butlast
+                                           butlast
+                                           (concat last-two)
+                                           vec))))))
 
-                      (string? x)
-                      (do
-                        (loop [n 1]
-                          (if (-> n (> (count x)))
-                            nil
-                            (do (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x :n n))))
-                                (swap! acc conj @counter)
-                                (recur (-> n (+ 1))))))
-                        (swap! counter #(dissoc % :n))
-                        nil)
+              (string? x)
+              (do
+                (loop [n 1]
+                  (if (-> n (> (count x)))
+                    nil
+                    (do (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x :n n))))
+                        (swap! acc conj @counter)
+                        (recur (-> n (+ 1))))))
+                (swap! counter #(dissoc % :n))
+                nil)
 
-                      :else nil))))
-            @acc)))
+              :else nil))))
+    (->> @acc (group-by :i))))
 
-       #_(#(do (cljs.pprint/pprint %) %))
+(defn determine-suggestion-hint
+  [cursor-pos grouped-indexes]
+  (let [{:keys [in-page x]} (-> grouped-indexes (get cursor-pos) first)]
+    (when in-page
+      (loop [maybe-link-text x
+             i cursor-pos]
+        (println (p/map-of maybe-link-text i))
+        (if (and (keyword? maybe-link-text)
+                 (-> i (< (-> grouped-indexes keys count))))
+          (recur (-> grouped-indexes (get i) first :x) (+ 1 i))
+          maybe-link-text)))))
 
-       (group-by :i)
+(defn suggested-roam-pages
+  [[note-selection roam-pages selected-feed-item]]
+  (let [text (-> selected-feed-item
+                 second
+                 :feed-item/selected-note
+                 :feed-item-note/text)
+        pos  (-> note-selection :note-selection/start)
+        hint (when (and (some? text)
+                        (some? pos))
+               (->> (insta/parse my-parser text :total true)
+                    add-closing-page-links
+                    build-index
+                    (determine-suggestion-hint pos)))]
+    (when (some? hint)
+      (-> fuzzy
+          (j/call :filter hint (-> roam-pages clj->js))
+          (js->clj :keywordize-keys true)
+          (->> (sort-by :score))
+          (->> (mapv :string))))))
+(reg-sub :sub/suggested-roam-pages
+           :<- [:sub/note-selection]
+           :<- [:sub/roam-pages]
+           :<- [:sub/selected-feed-item]
+           suggested-roam-pages)
 
-       #_(#(do (cljs.pprint/pprint %) %))
-
-       ;; determine text
-       ((fn [grouped]
-          (let [pos 14
-                {:keys [in-page x]} (-> grouped (get pos) first)]
-            (when in-page
-              (loop [maybe-link-text x
-                     i pos]
-                (println (p/map-of maybe-link-text i))
-                (if (and (keyword? maybe-link-text)
-                         (-> i (< (-> grouped keys count))))
-                  (recur (-> grouped (get i) first :x) (+ 1 i))
-                  maybe-link-text))))))
-       )
-)
-
-(println "-------------------")
+(comment
+  (suggested-roam-pages
+   [{:note-selection/start 3}
+    ["a" "aa" "aaa" "aaab" "bbbb" "cccc"]
+    [:nil {:feed-item/selected-note {:feed-item-note/text "x[[b]]"}}]])
+  )
