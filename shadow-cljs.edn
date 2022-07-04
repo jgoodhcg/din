@@ -16,18 +16,6 @@
    :output-to "mobile-app/test/node-tests.js"
    :autorun   true}
 
-  :titles-lambda
-  {:target     :node-library
-   :exports    {:handler hacked-api.titles/handler}
-   :output-dir "backend/hacked_api/build/titles/"
-   :output-to  "backend/hacked_api/build/titles/main.js"}
-
-  :eql-lambda
-  {:target     :node-library
-   :exports    {:handler eql.entrypoint/handler}
-   :output-dir "backend/eql/build/"
-   :output-to  "backend/eql/build/main.js"}
-
   :roam-plugin
   {:target     :browser
    :js-options {:js-package-dirs ["roam-plugin/node_modules"]}
