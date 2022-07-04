@@ -25,11 +25,10 @@
 
    [app.helpers :refer [>evt
                         screen-key-name-mapping
-                        millis->str
-                        key->pg
-                        pg->key]]
+                        millis->str]]
+   [pg :refer [pg->k k->pg]]
    [app.secrets :refer [supabase-url supabase-anon-key]]
-   ))
+   [app.screen.feed-item :refer [note-input-ref]]))
 
 (def supabase
   (-> spb
@@ -335,7 +334,7 @@
   [table-key]
   (go
     (let [item-count (-> supabase
-                         (j/call :from (key->pg table-key))
+                         (j/call :from (k->pg table-key))
                          (j/call :select "*" (j/lit {:count "exact"}))
                          (j/call :range 0 9)
                          <p!
@@ -345,13 +344,13 @@
              items []]
         (if (-> start (< end))
           (let [new-items (-> supabase
-                              (j/call :from (key->pg table-key))
+                              (j/call :from (k->pg table-key))
                               (j/call :select "*" (j/lit {:count "exact"}))
                               (j/call :range start end)
                               <p!
                               (j/get :data)
                               js->clj
-                              (->> (transform [sp/ALL sp/MAP-KEYS] pg->key)))
+                              (->> (transform [sp/ALL sp/MAP-KEYS] pg->k)))
                 new-start (-> end (+ 1))
                 new-end (-> end (+ 1000) (min item-count))
                 all-items (vec (concat items new-items))]
@@ -536,3 +535,12 @@
     (-> rn/Keyboard (j/call :addListener "keyboardDidShow"
                             (fn [x] (tap> {:x x :showing true})))))
   )
+
+(reg-fx :effect/add-page-link-to-text-input
+        (fn [{start :note-selection/start
+              end   :note-selection/end
+              text  :feed-item-note/text}]
+          (tap> (p/map-of :effect/add-page-link-to-text-input start end text))
+          (-> @note-input-ref
+              (j/call :setNativeProps (j/lit {:selection    (p/map-of start end)
+                                              :defaultValue text})))))

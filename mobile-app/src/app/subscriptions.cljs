@@ -411,6 +411,7 @@
              i cursor-pos]
         (if (and (keyword? maybe-link-text)
                  (-> i (<= (-> grouped-indexes keys count))))
+          ;; TODO need to go backwards as well
           (recur (-> grouped-indexes (get i) first :x) (+ 1 i))
           maybe-link-text)))))
 
@@ -501,7 +502,7 @@
 
   (->> (insta/parse athens-parser "abc [[123]]\n [[abc]]" :total true))
 
-  (-> "x[[b]] \n #[[c]] #d extra ]]"
+  (-> "x[[b]] \n #[[c/[[csharp]]]] #d extra ]]"
        (s/replace "\n" "_")
        (#(insta/parse my-parser % :total true))
        add-closing-page-links

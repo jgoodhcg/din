@@ -18,3 +18,7 @@ mobile-app/src/app/secrets.cljs
 roam-plugin/public/
 
 roam-plugin/src/roam_plugin/secrets.cljs
+
+# Supabase
+**/supabase/.branches
+**/supabase/.temp

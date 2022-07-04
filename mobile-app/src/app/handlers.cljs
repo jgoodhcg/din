@@ -5,9 +5,11 @@
                           reg-event-fx]]
    [com.rpl.specter :as sp :refer [setval transform select select-one!]]
    [clojure.spec.alpha :as s]
+   [clojure.string :as st]
    [app.helpers :refer [screen-name->key]]
    [app.db :as db :refer [default-app-db app-db-spec]]
-   [potpuri.core :as p]))
+   [potpuri.core :as p]
+   [potpuri.core :as pot]))
 
 (defn check-and-throw
   "Throw an exception if db doesn't have a valid spec."
@@ -530,3 +532,35 @@
        (select [:misc])
        tap>)
   )
+
+(defn create-page-link-in-selected-note [{:keys [db] :as cofx} _]
+  (let [{feed-id :selected-feed/id
+         item-id :selected-feed/item-id
+         note-id :selected-feed/item-selected-note-id}
+        (->> db (select-one! [:selected]))
+        text-path      [:feeds (sp/keypath feed-id)
+                        :feed/items (sp/keypath item-id)
+                        :feed-item/notes (sp/keypath note-id)
+                        :feed-item-note/text]
+        selection-path [:misc :misc/note-selection :note-selection/start]
+        prev-note-text (->> db (select-one! text-path) (or ""))
+        prev-selection (->> db (select-one! selection-path) (or 0))
+        take-pos       prev-selection
+        drop-pos       (-> prev-note-text count
+                           (- (-> prev-selection (+ 2))))
+        new-text       (-> prev-note-text
+                           (->> (take take-pos))
+                           vec
+                           (conj " [[]] ")
+                           (concat (->> prev-note-text (drop drop-pos)))
+                           (->> (st/join "")))
+        new-pos        (-> prev-selection (+ 3))]
+
+    (tap> (p/map-of prev-note-text prev-selection new-text new-pos :create-page-link))
+
+    (merge cofx
+           {:effect/add-page-link-to-text-input
+            {:note-selection/start new-pos
+             :note-selection/end   new-pos
+             :feed-item-note/text  new-text}})))
+(reg-event-fx :event/create-page-link-in-selected-note [base-interceptors] create-page-link-in-selected-note)

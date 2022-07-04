@@ -30,28 +30,22 @@
                 :title    title
                 :on-press #(on-suggest #js {:id (str (random-uuid)) :name title})}])])]))))
 
-(def my-ref (atom nil))
+(def note-input-ref (atom nil))
 
 (comment
-  (-> @my-ref
+  (-> @note-input-ref
       ;; js/Object.keys ;; => #js ["_nativeTag" "_children" "viewConfig" "_internalFiberInstanceHandleDEV" "clear" "isFocused" "getNativeRef"]
       (j/get :viewConfig)
       (j/get :NativeProps)
       (j/get :selection)
       )
-    )
 
-(comment
-  (-> "a [[]] b ] [c [["
-      ((fn [text]
-         (loop [from 0
-                indexes []]
-           (let [i (s/index-of text "[[" from)]
-             (if (nil? i)
-               indexes
-               (recur (-> i (+ 1)) (-> indexes (conj i)))))
-           ))))
-  )
+  (-> @note-input-ref
+      (j/call :setNativeProps (j/lit {:value "0123456789"})))
+  (-> @note-input-ref
+      (j/call :setNativeProps (j/lit {:selection {:start 2 :end 2}})))
+  (-> @note-input-ref goog.o/getKeys tap> )
+    )
 
 (defn my-text-input [{:keys [selected-note]}]
   [:> rn/View
@@ -69,7 +63,7 @@
                         :note-selection/end   end})
                  {:note-selection/start start
                   :note-selection/end   end})])
-       :ref            #(reset! my-ref %)
+       :ref            #(reset! note-input-ref %)
        :default-value  (:feed-item-note/text selected-note)
        :on-change-text #(>evt [:event/update-selected-note-text
                                {:feed-item-note/text %}])}]
@@ -235,18 +229,19 @@
           (when (and show-add-page-button
                      (nil? suggestions))
             [:> rn/KeyboardAvoidingView {:style {}}
-             [:> paper/Button {:mode "contained"} "[[  ]]"]])
+             [:> paper/Button {:mode     "contained"
+                               :on-press #(>evt [:event/create-page-link-in-selected-note])}
+              "[[  ]]"]])
 
           (when (and show-add-page-button
                      (some? suggestions))
             [:> rn/KeyboardAvoidingView {:style (tw "bg-gray-700")}
              [:> rn/FlatList
-              {:data                     (clj->js suggestions)
-               :key-extractor            identity
-               :render-item              (fn [obj] (r/as-element
-                                                    [:> paper/Button
-                                                     {:mode "outlined"}
-                                                     (j/get obj :item)]))
-               :horizontal               true}]])
+              {:data          (clj->js suggestions)
+               :key-extractor identity
+               :render-item   (fn [obj] (r/as-element [:> paper/Button
+                                                       {:mode "outlined"}
+                                                       (j/get obj :item)]))
+               :horizontal    true}]])
 
           ]))]))

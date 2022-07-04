@@ -1,10 +1,8 @@
 (ns app.helpers
   (:require
    [clojure.set :refer [map-invert]]
-   [clojure.string :refer [replace]]
    [re-frame.core :refer [subscribe dispatch dispatch-sync]]
-   ["tailwind-rn" :default tailwind-rn]
-   ))
+   ["tailwind-rn" :default tailwind-rn]))
 
 (def <sub (comp deref subscribe))
 
@@ -55,21 +53,3 @@
         (* 100)
         (str "%"))
     "0%"))
-
-(defn key->pg
-  [k]
-  (-> k
-      str
-      (replace #"/" "__")
-      (replace #"\." "_")
-      (replace #":" "")))
-
-(defn pg->key
-  [s]
-  (-> s
-      (replace #"__" "/")
-      (replace #"_" ".")
-      keyword))
-
-(comment
-  (-> :roam.sync/latest key->pg pg->key))

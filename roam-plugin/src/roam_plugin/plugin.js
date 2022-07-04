@@ -1,5 +1,5 @@
 let plugin = document.getElementById("din-roam-sync-main");
-if (plugin) {
+if (!plugin) {
   let plugin = document.createElement("script");
   plugin.src = "http://127.0.0.1:8000/assets/app/js/main.js";
   plugin.id = "din-roam-sync-main";

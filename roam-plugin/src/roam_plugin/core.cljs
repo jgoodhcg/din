@@ -5,16 +5,19 @@
             [cljs.core.async :refer [go]]
             [cljs.core.async.interop :refer [<p!]]
             [potpuri.core :as pot]
+            [clojure.string :refer [split]]
+            [com.rpl.specter :as specter :refer [transform select]]
 
-            [roam-plugin.secrets :refer [supabase-anon-key supabase-url]]))
+            [roam-plugin.secrets :refer [supabase-anon-key supabase-url]]
+            [pg :refer [pg->k k->pg]]))
 
 (def login-form
-  "<div class=\"container\" style=\"margin-top: 80px;\">
+  "<div class=\"container\" style=\"margin-top: 80px;background-color: grey;padding: 10px;border-radius: 2px;\">
     <h3> Login to Din </h3>
-    <label ><b>Username</b></label>
+    <label style=\"color: white\"><b>Username</b></label>
     <input type=\"text\" placeholder=\"Enter Username\" id=\"din-email\" style=\"color: black; background-color: white\">
 
-    <label ><b>Password</b></label>
+    <label style=\"color: white\"><b>Password</b></label>
     <input type=\"password\" placeholder=\"Enter Password\" id=\"din-password\" style=\"color: black; background-color: white\">
 
     <button id=\"din-login-submit\" style=\"color: black; background-color: rgb(239, 239, 239)\" >Login</button>
@@ -43,24 +46,24 @@
            [?p :block/uid ?uid]
            [?p :edit/time ?edit]]")
 
-(defn sync [supabase]
+(defn sync [supabase graph-id]
   (go
     (let [user       (-> supabase
                          (j/get :auth)
                          (j/call :user))
           user-id    (-> user (j/get :id))
           s-res      (-> supabase
-                         ;; TODO 2022-02-20 Justin add common key conversion stuff
-                         (j/call :from "roam__sync")
-                         (j/call :select "roam_sync__latest")
+                         (j/call :from (k->pg :roam/sync))
+                         (j/call :select (k->pg :roam.sync/latest))
                          <p!)
           s-error    (-> s-res (j/get :error))
           last-sync  (or (-> s-res
                              (j/get :data)
-                             (js->clj :keywordize-keys true)
+                             js->clj
+                             (->> (transform [sp/ALL sp/MAP-KEYS] pg->k))
+                             (->> (filter #(= graph-id (% :roam.sync/graph-id))))
                              first
-                             ;; TODO 2022-02-20 Justin add common key conversion stuff
-                             :roam_sync__latest)
+                             :roam.sync/latest)
                          0)
           titles     (-> js/roamAlphaAPI
                          (j/call :q titles-query)
@@ -69,14 +72,12 @@
                          (->> (filter #(> (nth % 3) (-> last-sync (- 1000))))))
           title-rows (->> titles
                           (mapv (fn [[_ title uid edit]]
-                                  ;; TODO 2022-02-20 Justin add common key conversion stuff
-                                  (j/lit {:user__id    user-id
-                                          :block__uid  uid
-                                          :node__title title
-                                          :edit__time  edit}))))
+                                  (j/lit {(k->pg :user/id)    user-id
+                                          (k->pg :block/uid)  uid
+                                          (k->pg :node/title) title
+                                          (k->pg :edit/time)  edit}))))
           u-res      (-> supabase
-                         ;; TODO 2022-02-20 Justin add common key conversion stuff
-                         (j/call :from "roam__pages")
+                         (j/call :from (k->pg :roam/pages))
                          (j/call :upsert (clj->js title-rows))
                          <p!)
           u-error    (-> u-res (j/get :error))
@@ -84,17 +85,16 @@
 
       (when (and (nil? s-error) (nil? u-error))
         (-> supabase
-            ;; TODO 2022-02-20 Justin add common key conversion stuff
-            (j/call :from "roam__sync")
-            (j/call :upsert (j/lit {:user__id          user-id
-                                    :roam_sync__latest now}))
+            (j/call :from (k->pg :roam/sync))
+            (j/call :upsert (j/lit {(k->pg :user/id)          user-id
+                                    (k->pg :roam.sync/latest) now}))
             <p!)))))
 
-(defn init-sync [supabase]
-  (sync supabase)
-  (js/setInterval #(sync supabase) 60000))
+(defn init-sync [supabase graph-id]
+  (sync supabase graph-id)
+  (js/setInterval #(sync supabase graph-id) 60000))
 
-(defn login-submit-gen [supabase]
+(defn login-submit-gen [supabase graph-id]
   (fn []
     (let [email    (-> js/document (j/call :getElementById "din-email") (j/get :value))
           password (-> js/document (j/call :getElementById "din-password") (j/get :value))]
@@ -115,10 +115,13 @@
 
             (if (some? user)
               (do (remove-login-root)
-                  (init-sync supabase))
+                  #_(init-sync supabase graph-id))
               (js/alert "Din Login failed"))))))))
 
-(defn login [supabase]
+(defn get-graph-id [url]
+  (-> url (split "#") second (split "app/") second (split "/") first))
+
+(defn login [supabase graph-id]
   (let [app        (-> js/document (j/call :getElementById "app"))
         login-root (-> js/document (j/call :createElement "div"))]
     (-> login-root (j/assoc! :id (str "din-login-root")))
@@ -127,7 +130,7 @@
     (-> app (j/get :parentElement) (j/call :appendChild login-root))
     (-> js/document
         (j/call :getElementById "din-login-submit")
-        (j/call :addEventListener "click" (login-submit-gen supabase)))
+        (j/call :addEventListener "click" (login-submit-gen supabase graph-id)))
     (-> js/document
         (j/call :getElementById "din-login-cancel")
         (j/call :addEventListener "click" remove-login-root))))
@@ -137,11 +140,14 @@
 ;; anon key would probably be easy to spot from source file though ...
 ((fn []
    (let [supabase (-> sp (j/call :createClient supabase-url supabase-anon-key))
-         user     (-> supabase (j/get :auth) (j/call :user))]
+         user     (-> supabase (j/get :auth) (j/call :user))
+         graph-id (-> js/window (j/get :location) (j/get :href)
+                      get-graph-id)]
+     (println (pot/map-of graph-id user))
      (if (some? user)
        ;; get last sync
        ;; sync pages modified since then
        ;; set up sync interval
-       (init-sync supabase)
+       (init-sync supabase graph-id)
        ;; prompt to login
-       (login supabase)))))
+       (login supabase graph-id)))))
