@@ -6,7 +6,8 @@
             [cljs.core.async.interop :refer [<p!]]
             [potpuri.core :as pot]
             [clojure.string :refer [split]]
-            [com.rpl.specter :as specter :refer [transform select]]
+            [com.rpl.specter :as specter :refer [transform ALL MAP-KEYS]]
+            [tick.core :as t]
 
             [roam-plugin.secrets :refer [supabase-anon-key supabase-url]]
             [pg :refer [pg->k k->pg]]))
@@ -38,8 +39,6 @@
       (j/call :getElementById "din-login-root")
       (j/call :remove)))
 
-(defn interval-sync [])
-
 (def titles-query
   "[:find ?p ?title ?uid ?edit
     :where [?p :node/title ?title]
@@ -47,21 +46,23 @@
            [?p :edit/time ?edit]]")
 
 (defn sync [supabase graph-id]
+  (println (pot/map-of :sync))
   (go
     (let [user       (-> supabase
                          (j/get :auth)
                          (j/call :user))
           user-id    (-> user (j/get :id))
           s-res      (-> supabase
-                         (j/call :from (k->pg :roam/sync))
-                         (j/call :select (k->pg :roam.sync/latest))
+                         (j/call :from (k->pg :roam.sync))
+                         (j/call :select (str (k->pg :roam.sync/latest) ","
+                                              (k->pg :roam/graph-id)))
                          <p!)
           s-error    (-> s-res (j/get :error))
           last-sync  (or (-> s-res
                              (j/get :data)
                              js->clj
-                             (->> (transform [sp/ALL sp/MAP-KEYS] pg->k))
-                             (->> (filter #(= graph-id (% :roam.sync/graph-id))))
+                             (->> (transform [ALL MAP-KEYS] pg->k))
+                             (->> (filter #(= graph-id (% :roam/graph-id))))
                              first
                              :roam.sync/latest)
                          0)
@@ -72,27 +73,33 @@
                          (->> (filter #(> (nth % 3) (-> last-sync (- 1000))))))
           title-rows (->> titles
                           (mapv (fn [[_ title uid edit]]
-                                  (j/lit {(k->pg :user/id)    user-id
-                                          (k->pg :block/uid)  uid
-                                          (k->pg :node/title) title
-                                          (k->pg :edit/time)  edit}))))
+                                  (j/lit {(k->pg :user/id)               user-id
+                                          (k->pg :roam/graph-id)         graph-id
+                                          (k->pg :roam.pages/block-uid)  uid
+                                          (k->pg :roam.pages/node-title) title
+                                          (k->pg :roam.pages/edit-time)  (-> edit (t/instant) str)}))))
           u-res      (-> supabase
-                         (j/call :from (k->pg :roam/pages))
+                         (j/call :from (k->pg :roam.pages))
                          (j/call :upsert (clj->js title-rows))
                          <p!)
           u-error    (-> u-res (j/get :error))
-          now        (-> js/Date (j/call :now))]
+          now        (-> (t/instant) str)]
+
+      (println (pot/map-of u-res u-error s-res))
 
       (when (and (nil? s-error) (nil? u-error))
         (-> supabase
-            (j/call :from (k->pg :roam/sync))
+            (j/call :from (k->pg :roam.sync))
             (j/call :upsert (j/lit {(k->pg :user/id)          user-id
-                                    (k->pg :roam.sync/latest) now}))
-            <p!)))))
+                                    (k->pg :roam.sync/latest) now
+                                    (k->pg :roam/graph-id)    graph-id}))
+            <p!
+            println)))))
 
 (defn init-sync [supabase graph-id]
+  (println (pot/map-of :init-sync))
   (sync supabase graph-id)
-  (js/setInterval #(sync supabase graph-id) 60000))
+  #_(js/setInterval #(sync supabase graph-id) 60000))
 
 (defn login-submit-gen [supabase graph-id]
   (fn []
@@ -115,7 +122,7 @@
 
             (if (some? user)
               (do (remove-login-root)
-                  #_(init-sync supabase graph-id))
+                  (init-sync supabase graph-id))
               (js/alert "Din Login failed"))))))))
 
 (defn get-graph-id [url]
@@ -151,3 +158,29 @@
        (init-sync supabase graph-id)
        ;; prompt to login
        (login supabase graph-id)))))
+
+
+(comment
+  (def supabase (-> sp (j/call :createClient supabase-url supabase-anon-key)))
+
+  (go (<p! (-> supabase (j/get :auth) (j/call :signUp (j/lit {:email "jgoodhcg+din@gmail.com"
+                                                              :password "testone"})))))
+  (go
+    (-> supabase
+        (j/get :auth)
+        (j/call :signIn
+                (j/lit {:email "jgoodhcg+din@gmail.com"
+                        :password "testone"}))
+        <p!
+        println))
+  (-> supabase (j/get :auth) (j/call :user))
+
+  (go
+    (-> supabase
+      (j/call :from (k->pg :roam.sync))
+      (j/call :select (str (k->pg :roam.sync/latest) ","
+                           (k->pg :roam/graph-id)))
+      <p!
+      println)
+    )
+  )

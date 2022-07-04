@@ -102,6 +102,7 @@
                                                       :feed-item/url         url
                                                       :feed-item/published   (-> published
                                                                                  js/Date.parse
+                                                                                 ;; TODO 2021-07-04 Justin - make sure this works with new version of tick
                                                                                  (t/new-duration :millis)
                                                                                  t/instant
                                                                                  t/format)
