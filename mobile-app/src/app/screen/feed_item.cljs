@@ -55,8 +55,10 @@
 
 (defn my-text-input [{:keys [selected-note]}]
   [:> rn/View
-     [:> rn/TextInput
-      {:onSelectionChange
+     [:> paper/TextInput
+      {:multiline true
+       :style (tw "w-full")
+       :onSelectionChange
        #(>evt [:event/set-note-selection
                (let [selection (-> %
                                    (j/get :nativeEvent)
@@ -235,8 +237,16 @@
             [:> rn/KeyboardAvoidingView {:style {}}
              [:> paper/Button {:mode "contained"} "[[  ]]"]])
 
-          (when (some? suggestions)
-            [:> rn/KeyboardAvoidingView {:style {}}
-             [:> paper/Text (-> suggestions first)]])
+          (when (and show-add-page-button
+                     (some? suggestions))
+            [:> rn/KeyboardAvoidingView {:style (tw "bg-gray-700")}
+             [:> rn/FlatList
+              {:data                     (clj->js suggestions)
+               :key-extractor            identity
+               :render-item              (fn [obj] (r/as-element
+                                                    [:> paper/Button
+                                                     {:mode "outlined"}
+                                                     (j/get obj :item)]))
+               :horizontal               true}]])
 
           ]))]))

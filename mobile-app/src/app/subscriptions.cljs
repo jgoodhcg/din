@@ -311,6 +311,12 @@
             (and (vector? x) (= :page-link (first x)))
             (conj x :page-link-close)
 
+            (and (vector? x) (= :braced-hashtag (first x)))
+            (conj x :page-link-close)
+
+            (and (vector? x) (= :naked-hashtag (first x)))
+            (conj x :naked-hashtag-psuedo-close)
+
             :else x)))))
 
 (defn build-index
@@ -323,34 +329,65 @@
             (cond
               (keyword? x)
               (case x
-                :page-link
+                ;; this _shouldn't_ happen
+                ;; but if it does it is nice to fail gracefully
+                ;; rather than blow up on "no matching case"
+                :instaparse/failure         nil
+                :text-or                    nil
+
+                :page-link ;; [[ => 2
                 (do (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
                     (swap! acc conj @counter)
                     (swap! counter (fn [c] (-> c (update :i inc) (assoc :in-page true :x x))))
                     (swap! acc conj @counter)
                     nil)
 
-                :page-link-close
+                :braced-hashtag ;; #[[ => 3
+                (do (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
+                    (swap! acc conj @counter)
+                    (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
+                    (swap! acc conj @counter)
+                    (swap! counter (fn [c] (-> c (update :i inc) (assoc :in-page true :x x))))
+                    (swap! acc conj @counter)
+                    nil)
+
+                :naked-hashtag ;; # => 1
+                (do (swap! counter (fn [c] (-> c (update :i inc) (assoc :in-page true :x x))))
+                    (swap! acc conj @counter)
+                    nil)
+
+                :page-link-close ;; ]] => 2
                 (do (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
                     (swap! acc conj @counter)
                     (swap! counter (fn [c] (-> c (update :i inc) (assoc :x x))))
                     (swap! acc conj @counter)
                     nil)
 
-                :text-or  nil
-                :text-run (when (-> @acc last :x (= :page-link-close))
-                            (swap! counter (fn [c] (-> c (assoc :in-page false))))
-                            (swap! acc
-                                   (fn [a]
-                                     (let [last-two
+                :naked-hashtag-psuedo-close ;; no incrementing
+                ;; this is really just for :text-run to "close" the counter
+                ;; in the group-by this results in the same index as the corresponding naked-hashtag and is a no-op
+                (let [c (-> @counter (assoc :x x))]
+                  (swap! acc conj c)
+                  nil)
+
+                :text-run (let [last-k (-> @acc last :x)]
+                            (when (or (= last-k :page-link-close)
+                                      (= last-k :naked-hashtag-psuedo-close))
+                              ;; for either closing key we want to swap the counter to not be in a page
+                              (swap! counter (fn [c] (-> c (assoc :in-page false))))
+                              ;; only for page link close do we need to alter the last two indexes "]]" to not be in a page
+                              (when (= last-k :page-link-close)
+                                (swap! acc
+                                       (fn [a]
+                                         (let [last-two
+                                               (-> a
+                                                   (subvec (-> a count (- 2)))
+                                                   (->> (mapv #(assoc % :in-page false))))]
                                            (-> a
-                                               (subvec (-> a count (- 2)))
-                                               (->> (mapv #(assoc % :in-page false))))]
-                                       (-> a
-                                           butlast
-                                           butlast
-                                           (concat last-two)
-                                           vec))))))
+                                               butlast
+                                               butlast
+                                               (concat last-two)
+                                               vec))))))))
 
               (string? x)
               (do
@@ -364,7 +401,7 @@
                 nil)
 
               :else nil))))
-    (->> @acc (group-by :i))))
+    (->> @acc (group-by :i) (into (sorted-map)))))
 
 (defn determine-suggestion-hint
   [cursor-pos grouped-indexes]
@@ -372,7 +409,6 @@
     (when in-page
       (loop [maybe-link-text x
              i cursor-pos]
-        (println (p/map-of maybe-link-text i))
         (if (and (keyword? maybe-link-text)
                  (-> i (<= (-> grouped-indexes keys count))))
           (recur (-> grouped-indexes (get i) first :x) (+ 1 i))
@@ -383,7 +419,9 @@
   (let [text (-> selected-feed-item
                  second
                  :feed-item/selected-note
-                 :feed-item-note/text)
+                 :feed-item-note/text
+                 ;; replace newlines since they cause `:instaparse/failure`s
+                 (#(when (some? %) (clojure.string/replace % "\n" " "))))
         pos  (-> note-selection :note-selection/start)
         hint (when (and (some? text)
                         (some? pos))
@@ -403,9 +441,75 @@
            :<- [:sub/selected-feed-item]
            suggested-roam-pages)
 
+(defparser athens-parser
+   "text-or = ( code-block /
+               code-span /
+               page-link /
+               braced-hashtag /
+               naked-hashtag /
+               block-ref /
+               typed-block-ref /
+               text-run )*
+   (* below we need to list all significant groups in lookbehind + $ *)
+   text-run = #'.+?(?=(\\[\\[|\\]\\]|#|\\(\\(|\\)\\)|$|\\`))\\n?'
+   code-span = < '`' > text-or < '`' >
+   code-block = < '```' >
+                ( text-or | '\\n' )+
+                < '```' >
+   page-link = < double-square-open >
+               ( text-till-double-square-close /
+                 page-link /
+                 braced-hashtag /
+                 naked-hashtag )+
+               < double-square-close >
+   naked-hashtag = < hash > #'[^\\ \\+\\!\\@\\#\\$\\%\\^\\&\\*\\(\\)\\?\\\"\\;\\:\\]\\[]+'
+   braced-hashtag = < hash double-square-open >
+                    ( text-till-double-square-close /
+                      page-link /
+                      braced-hashtag /
+                      naked-hashtag)+
+                    < double-square-close >
+   block-ref = < double-paren-open >
+               text-till-double-paren-close
+               < double-paren-close >
+   < text-till-double-square-close > = #'[^\\n$\\[\\]\\#]+?(?=(\\]\\]|\\[\\[|#))'
+   < text-till-double-paren-close > = #'[^\\s]+?(?=(\\)\\)))'
+   typed-block-ref = < double-curly-open >
+                     ref-type < #':\\s*' > block-ref
+                     < double-curly-close >
+   ref-type = #'[^:]+'
+   hash = '#'
+   double-square-open = '[['
+   double-square-close = ']]'
+   double-paren-open = '(('
+   double-paren-close = '))'
+   double-curly-open = '{{'
+   double-curly-close = '}}'")
+
 (comment
   (suggested-roam-pages
    [{:note-selection/start 3}
     ["a" "aa" "aaa" "aaab" "bbbb" "cccc"]
-    [:nil {:feed-item/selected-note {:feed-item-note/text "x[[b]]"}}]])
+    [:nil {:feed-item/selected-note {:feed-item-note/text "x[[b\n]] \n"}}]])
+
+  (suggested-roam-pages
+   [{:note-selection/start 12}
+    ["a" "aa" "aaa" "aaab" "bbbb" "cccc"]
+    [:nil {:feed-item/selected-note {:feed-item-note/text "x[[b]] \n [[c]]"}}]])
+
+  (->> (insta/parse my-parser "abc [[123]]\n [[abc]]" :total true))
+
+  (->> (insta/parse athens-parser "abc [[123]]\n [[abc]]" :total true))
+
+  (-> "x[[b]] \n #[[c]] #d extra ]]"
+       (s/replace "\n" "_")
+       (#(insta/parse my-parser % :total true))
+       add-closing-page-links
+       build-index)
+
+(suggested-roam-pages
+   [{:note-selection/start 18}
+    ["a" "aa" "aaa" "aaab" "bbbb" "cccc" "abad"]
+    [:nil {:feed-item/selected-note {:feed-item-note/text "x[[b]] \n #[[c]] #d extra ]]"}}]])
+
   )
