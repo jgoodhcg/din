@@ -21,7 +21,7 @@
    [cognitect.transit :as transit]
    [potpuri.core :as p]
    [com.rpl.specter :as sp :refer [transform select]]
-   [tick.alpha.api :as t]
+   [tick.core :as t]
 
    [app.helpers :refer [>evt
                         screen-key-name-mapping
@@ -102,8 +102,6 @@
                                                       :feed-item/url         url
                                                       :feed-item/published   (-> published
                                                                                  js/Date.parse
-                                                                                 ;; TODO 2021-07-04 Justin - make sure this works with new version of tick
-                                                                                 (t/new-duration :millis)
                                                                                  t/instant
                                                                                  t/format)
                                                       :feed-item/order       order})))))}]))
@@ -286,46 +284,6 @@
                (j/call :setStatusAsync (j/lit {:rate % :shouldCorrectPitch true}))
                <p!)))
 
-(defn <eql-request
-  [eql]
-  (go
-    (tap> {:location "<eql-request"
-           :req      eql})
-    (let [jwt (-> Auth
-                  (j/call :currentSession)
-                  <p!
-                  (j/call :getIdToken)
-                  (j/get :jwtToken))]
-      (-> "https://rf8gjfxxbd.execute-api.us-east-2.amazonaws.com/default/din-eql"
-                  (http/post {:with-credentials? false
-                              :headers           {"Authorization" (str "Bearer " jwt)}
-                              :json-params       {:transit-req (->> eql (transit/write writer))}})
-                  <!
-                  :body
-                  (doto tap>)
-                  (->> (transit/read reader))))))
-
-(defn <load-stripe-data!
-  []
-  (go
-    (tap> {:location "<load-stripe-data!"
-           :msg      "loading stripe data"})
-    (let [res (<! (<eql-request [:user/email
-                                 :stripe/free-pass
-                                 {:stripe/active-subscription
-                                  [:stripe.subscription/created
-                                   :stripe.subscription/current-period-end
-                                   :stripe.subscription/current-period-start
-                                   :stripe.subscription/cancel-at-period-end
-                                   :stripe.price/id]}
-                                 {:stripe/prices
-                                  [:stripe.price/id
-                                   :stripe.price/unit-amount
-                                   :stripe.product/name
-                                   :stripe.product/description
-                                   :stripe.product/images]}]))]
-      (>evt [:event/set-stripe-data res]))))
-
 (comment
   (-> @re-frame.db/app-db :stripe tap>)
   (-> Auth (j/call :signOut))
@@ -375,32 +333,14 @@
                      :user     user})
               (when (some? user)
                 (go
-                  ;; TODO 2022-02-24 Justin: Get stripe stuff
-                  ;; (<! (<load-stripe-data!))
                   (>evt [:event/reset-roam-pages
-                         (->> :roam/pages
+                         (->> :roam.pages
                              <get-all-items
                              <!
-                             (select [sp/ALL :node/title]))])
+                             ;; TODO 2022-07-06 Justin - filter for graph id?
+                             (select [sp/ALL :roam.pages/node-title]))])
                   (>evt [:event/set-supabase-user user])
                   ))))))
-
-(reg-fx :effect/load-stripe-data
-        (fn []
-          (tap> {:location :effect/load-stripe-data})
-          (go (<! (<load-stripe-data!)))))
-
-(reg-fx :effect/get-checkout-url
-        (fn []
-          (tap> {:location :effect/get-checkout-url})
-          (go
-            (let [res (<! (<eql-request [{`(create-checkout-session
-                                            {:stripe.checkout/success-url "https://uh.success.idk"
-                                             :stripe.checkout/cancel-url "https://uh.cancel.idk"})
-                                          [:stripe.checkout/checkout-url]}]))]
-              (tap> {:location :effect/get-checkout-url
-                     :res res})))
-          ))
 
 (comment
   (go
