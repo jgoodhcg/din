@@ -1,4 +1,4 @@
-(ns app.subscriptions-test
+(ns din.app.subscriptions-test
   (:require
    [cljs.test :refer [deftest is testing]]
    [app.subscriptions :as subscriptions]))

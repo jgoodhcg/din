@@ -1,4 +1,4 @@
-(ns app.subscriptions
+(ns din.app.subscriptions
   (:require ["fuzzy" :as fuzzy]
 
             [clojure.string :as s]

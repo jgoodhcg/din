@@ -1,4 +1,4 @@
-(ns app.screen.feeds
+(ns din.app.screen.feeds
   (:require
    ["react-native" :as rn]
    ["react-native-paper" :as paper]

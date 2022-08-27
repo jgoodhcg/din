@@ -1,4 +1,4 @@
-(ns app.screen.subscription
+(ns din.app.screen.subscription
   (:require
    ["react-native" :as rn]
    ["react-native-paper" :as paper]

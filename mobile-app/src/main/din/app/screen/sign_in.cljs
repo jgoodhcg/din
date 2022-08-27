@@ -1,4 +1,4 @@
-(ns app.screen.sign-up
+(ns din.app.screen.sign-in
   (:require
    ["react-native" :as rn]
    ["react-native-paper" :as paper]
@@ -12,9 +12,8 @@
   (r/as-element
     [(fn []
        (let [{email    :supabase/email
-              password :supabase/password
-              confirm  :supabase/confirm-password} (<sub [:sub/supabase-credentials])
-             error                                (<sub [:sub/supabase-sign-up-error])]
+              password :supabase/password} (<sub [:sub/supabase-credentials])
+             error                         (<sub [:sub/supabase-sign-in-error])]
 
          [:> rn/SafeAreaView {:style (tw "flex flex-1")}
           [:> rn/StatusBar {:visibility "hidden"}]
@@ -34,13 +33,6 @@
                                  :label           "password"
                                  :default-value   password
                                  :on-change-text  #(>evt [:event/set-supabase-password %])}]
-            [:> paper/TextInput {:style           (tw "mb-4")
-                                 :secureTextEntry true
-                                 :error           (some? error)
-                                 :mode            "outlined"
-                                 :label           "confirm-password"
-                                 :default-value   confirm
-                                 :on-change-text  #(>evt [:event/set-supabase-confirm-password %])}]
 
             (when (some? error)
               [:> paper/Text {:style (tw "text-red-400")} error])
@@ -48,8 +40,8 @@
             [:> paper/Button {:style    (tw "my-2")
                               :mode     "contained"
                               :icon     "account"
-                              :on-press #(>evt [:event/sign-up])}
-             "Sign Up"]
+                              :on-press #(>evt [:event/sign-in])}
+             "Sign In"]
 
             ]
            ]]))]))

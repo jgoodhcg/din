@@ -6,8 +6,8 @@
  :builds
  {:app
   {:target     :react-native
-   :init-fn    app.index/init
-   :output-dir "mobile-app/build"
+   :init-fn    din.app/init
+   :output-dir "mobile-app/app"
    :devtools   {:autoload true
                 :preloads [shadow.expo.keep-awake]}}
 

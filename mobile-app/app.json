@@ -1,14 +1,7 @@
 {
   "expo": {
-    "name": "mobile-app",
-    "slug": "mobile-app",
-    "privacy": "public",
-    "entryPoint": "./build/index.js",
-    "platforms": [
-      "ios",
-      "android",
-      "web"
-    ],
+    "name": "din",
+    "slug": "din",
     "version": "0.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,6 +10,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "userInterfaceStyle": "dark",
     "updates": {
       "fallbackToCacheTimeout": 0
     },
@@ -25,15 +19,13 @@
     ],
     "ios": {
       "supportsTablet": true,
+      "usesIcloudStorage": true,
+      "bundleIdentifier": "com.jgoodhcg.din",
       "infoPlist": {
         "UIBackgroundModes": [
           "audio"
         ]
       }
-    },
-    "android": {
-      "package": "com.brainbutterfly.din",
-      "versionCode": 1
     }
   }
 }

@@ -1,4 +1,4 @@
-(ns app.index
+(ns din.app
   (:require
    ["@react-navigation/native" :as nav]
    ["@react-navigation/native-stack" :as rn-stack]
@@ -21,18 +21,18 @@
    [re-frame.core]
    [shadow.expo :as expo]
 
-   [app.fx :refer [!navigation-ref]]
-   [app.handlers]
-   [app.subscriptions]
-   [app.helpers :refer [<sub >evt >evt-sync screen-key-name-mapping screen-key->name]]
-   [app.screen.feeds :refer [root] :rename {root feeds-screen}]
-   [app.screen.feed :refer [root] :rename {root feed-screen}]
-   [app.screen.feed-item :refer [root] :rename {root feed-item-screen}]
-   [app.screen.subscription :refer [root] :rename {root subscription-screen}]
-   [app.screen.settings :refer [root] :rename {root settings-screen}]
-   [app.screen.account :refer [root] :rename {root account-screen}]
-   [app.screen.sign-in :refer [root] :rename {root sign-in-screen}]
-   [app.screen.sign-up :refer [root] :rename {root sign-up-screen}]
+   [din.app.fx :refer [!navigation-ref]]
+   [din.app.handlers]
+   [din.app.subscriptions]
+   [din.app.helpers :refer [<sub >evt >evt-sync screen-key-name-mapping screen-key->name]]
+   [din.app.screen.feeds :refer [root] :rename {root feeds-screen}]
+   [din.app.screen.feed :refer [root] :rename {root feed-screen}]
+   [din.app.screen.feed-item :refer [root] :rename {root feed-item-screen}]
+   [din.app.screen.subscription :refer [root] :rename {root subscription-screen}]
+   [din.app.screen.settings :refer [root] :rename {root settings-screen}]
+   [din.app.screen.account :refer [root] :rename {root account-screen}]
+   [din.app.screen.sign-in :refer [root] :rename {root sign-in-screen}]
+   [din.app.screen.sign-up :refer [root] :rename {root sign-up-screen}]
    ))
 
 (def api-endpoint "https://yabrbam9si.execute-api.us-east-2.amazonaws.com/default/din-page-titles")

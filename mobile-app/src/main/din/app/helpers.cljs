@@ -1,4 +1,4 @@
-(ns app.helpers
+(ns din.app.helpers
   (:require
    [clojure.set :refer [map-invert]]
    [re-frame.core :refer [subscribe dispatch dispatch-sync]]

@@ -1,4 +1,4 @@
-(ns app.handlers-test
+(ns din.app.handlers-test
   (:require
    [com.rpl.specter :as sp :refer [select-one!]]
    [cljs.test :refer [deftest is testing]]

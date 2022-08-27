@@ -1,4 +1,4 @@
-(ns app.screen.settings
+(ns din.app.screen.settings
   (:require
    ["react-native" :as rn]
    ["react-native-paper" :as paper]

@@ -1,4 +1,4 @@
-(ns app.handlers
+(ns din.app.handlers
   (:require
    [re-frame.core :refer [reg-event-db
                           ->interceptor

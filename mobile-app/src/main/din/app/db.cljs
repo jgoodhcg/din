@@ -1,4 +1,4 @@
-(ns app.db
+(ns din.app.db
   (:require
    [clojure.spec.alpha :as s]
    [spec-tools.data-spec :as ds]))

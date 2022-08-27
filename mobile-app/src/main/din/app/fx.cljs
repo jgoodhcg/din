@@ -1,4 +1,4 @@
-(ns app.fx
+(ns din.app.fx
   (:require
    ["aws-amplify" :default Amplify :refer [Auth Hub]]
    ["react-native-rss-parser" :as rss]

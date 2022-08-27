@@ -1,4 +1,4 @@
-(ns app.screen.account
+(ns din.app.screen.account
   (:require
    ["react-native" :as rn]
    ["react-native-paper" :as paper]
