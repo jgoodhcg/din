@@ -22,3 +22,5 @@ roam-plugin/src/roam_plugin/secrets.cljs
 # Supabase
 **/supabase/.branches
 **/supabase/.temp
+
+tmp-migration.sql
