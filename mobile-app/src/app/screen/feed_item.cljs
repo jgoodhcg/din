@@ -50,8 +50,8 @@
 (defn my-text-input [{:keys [selected-note]}]
   [:> rn/View
      [:> paper/TextInput
-      {:multiline true
-       :style (tw "w-full")
+      {:multiline      true
+       :style          (tw "w-full")
        :onSelectionChange
        #(>evt [:event/set-note-selection
                (let [selection (-> %
@@ -64,7 +64,7 @@
                  {:note-selection/start start
                   :note-selection/end   end})])
        :ref            #(reset! note-input-ref %)
-       :default-value  (:feed-item-note/text selected-note)
+       :value          (:feed-item-note/text selected-note)
        :on-change-text #(>evt [:event/update-selected-note-text
                                {:feed-item-note/text %}])}]
 

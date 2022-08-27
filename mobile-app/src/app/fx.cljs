@@ -485,3 +485,17 @@
           (-> @note-input-ref
               (j/call :setNativeProps (j/lit {:selection    (p/map-of start end)
                                               :defaultValue text})))))
+
+(reg-fx :effect/set-persist-handler
+        (fn [_]
+          (-> rn/AppState
+              (j/call :addEventListener
+                      "change"
+                      (fn [next-app-state]
+                        ;; Persisting the app-db to the file system happens on putting the app in the background
+                        ;; Doing it on "active" results in some lag after the ui loads
+
+                        ;; This doesn't work on closing the app (only backgrounding it) -- on android
+                        ;; I guess ios works on closing ... uncomfirmed
+                        (when (not= next-app-state "active")
+                          (>evt [:event/persist-app-db])))))))

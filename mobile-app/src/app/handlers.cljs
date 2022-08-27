@@ -39,18 +39,7 @@
                validate-spec
                identity)))
 
-(def persist
-  (->interceptor
-    :id :persist
-    :after (fn [context]
-             (->> context (setval [:effects :effect/persist]
-                                  (-> context
-                                      :effects
-                                      :db))))))
-
-(def base-interceptors  [
-                         ;; persist
-                         ;; (when ^boolean goog.DEBUG debug) ;; use this for some verbose re-frame logging
+(def base-interceptors  [;; (when ^boolean goog.DEBUG debug) ;; use this for some verbose re-frame logging
                          spec-validation])
 
 (def id-gen
@@ -118,7 +107,10 @@
 
 (defn trigger-load-db [cofx _]
   (println "trigger load app db handler ----------------------------")
-  (merge cofx {:effect/load true}))
+  (merge cofx {:effect/load true
+               ;; TODO 2022-07-11 Justin - Enable persisting
+               ;; :effect/set-persist-handler true
+               }))
 (reg-event-fx :event/trigger-load-db trigger-load-db)
 
 (defn load-app-db [_ [_ {:keys [app-db version]}]]
@@ -564,3 +556,7 @@
              :note-selection/end   new-pos
              :feed-item-note/text  new-text}})))
 (reg-event-fx :event/create-page-link-in-selected-note [base-interceptors] create-page-link-in-selected-note)
+
+(defn persist-app-db [{:keys [db]} _]
+  (->> {:effect/persist db}))
+(reg-event-fx :event/persist-app-db persist-app-db)
